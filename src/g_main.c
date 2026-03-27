@@ -202,7 +202,7 @@ void ClientEndServerFrames (void)
 		ent = g_edicts + 1 + i;
 		if (!ent->inuse || !ent->client)
 			continue;
-		if(!(ent->svflags & SVF_MONSTER))  
+		if(!(ent->svflags & SVF_MONSTER))
 			ClientEndServerFrame (ent);
 	}
 
@@ -224,14 +224,14 @@ void Get_NextMap()
 	char	top[MAX_QPATH];
 	char	nextmap[MAX_QPATH];
 	int		i;
-	
+
 	if(!maplist->string) return;
 
 	//sprintf(Buff,".\\%s\\3ZBMAPS.LST",gamepath->string);
 	sprintf(Buff,"%s/%s/3zbmaps.lst",GET_BASEPATH_STR(),gamepath->string);
 	fp = fopen(Buff,"r");
 	if(fp == NULL) return;
-	
+
 	//search section
 	while(1)
 	{
@@ -377,7 +377,7 @@ void CheckNeedPass (void)
 
 	// if password or spectator_password has changed, update needpass
 	// as needed
-	if (password->modified || spectator_password->modified) 
+	if (password->modified || spectator_password->modified)
 	{
 		password->modified = spectator_password->modified = false;
 
@@ -586,7 +586,7 @@ void G_RunFrame (void)
 			{
 //gi.bprintf(PRINT_HIGH,"Assigned!!!\n");
 				CTFJobAssign();
-				ctfjob_update = level.time + FRAMETIME * 2; 
+				ctfjob_update = level.time + FRAMETIME * 2;
 			}
 		}
 //////////旗のスコアチェック
