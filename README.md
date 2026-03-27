@@ -1,5 +1,87 @@
 # ZigFlag - Custom 3rd Zigock Bot II for Quake II
 
+**Pull Requests are welcomed!**
+
+# Fixes in this fork
+
+- fixed selecting next item in menu (`]` by default)
+
+# Changes
+
+- new: added `store` command to save player position, similar as in Jump mod
+- new: added `recall` command to restore player position. If player dies then moves to spawn point
+- added showing remaining time for all game modes
+- add basic "low effort version" of TeamDeathmatch option (`set tdm 1; set ctf 1`)
+
+# Notes
+
+- loading `exec addbot.cfg` is useful for spawning bots with key letters or commands - like `spawn1`, or `despawn1`
+    - use Numpad Plus key to increase number of bots and Numpad Enter spawn them or use command like `spawn1`
+- spawning sound if different than usual
+- to play CTF: `exec ctf`
+- when `set zigrapple 1` is set, use `use grapple` to change weapon to grappling hook
+- use `kill` command to die. There's a cool off period. Useful for learning spawn points
+- use `drop tech` to drop tech
+- use `drop flag` to drop flag
+- some models are missing (like grappling hook). You need to copy pak from `ctf` mod
+- to add bot with highest skill, edit `3zbconfig.cfg` after `#Default Bots` comment and add:
+```
+\\Your_bot_name	\male	\grunt	\0\7\9\9\9\1\9	\180\180\10\11	\1\1\1\1\9	\R\1
+```
+
+# Building
+
+## Prerequisites
+
+Dependencies might be missing and some are probably excessive.
+I didn't optimize this as it's time/cost not effective for me.
+Best might be to use Docker for the job.
+
+```bash
+# Tested on CachyOS
+sudo pacman -S cmake gcc
+
+# For cross compilation
+sudo pacman -S \
+    mingw-w64-tools \
+    mingw-w64-binutils \
+    mingw-w64-crt \
+    mingw-w64-gcc \
+    mingw-w64-headers \
+    mingw-w64-winpthreads
+paru -S \
+    mingw-w64-zlib \
+    mingw-w64-zlib-ng \
+    mingw-w64-ffmpeg \
+    mingw-w64-pkg-config \
+    mingw-w64-libpng \
+    mingw-w64-libjpeg-turbo \
+    mingw-w64-openal \
+    mingw-w64-zstd
+```
+
+## Compilation
+
+Review scripts before executing them.
+
+```bash
+./build-lin64.sh
+./clean.sh
+./build-win32.sh
+./clean.sh
+./build-win64.sh
+```
+
+# TODO
+
+- fix compilation warnings
+- replace configs with new ones
+- README.md: update
+- TDM: don't retaliate on rocket damage
+- TDM: see if there's a way how to autobalance bots
+
+# Old part of README.md below
+
 This is a custom port of the 3rd Zigock Bot II to Quake II - Yamagi Quake II is recommended.  \
 All warnings (up to GCC9) and unused variables have been addressed in the original source. \
 The code also has handpicked backport fixes, enhancements and features applied from various \
