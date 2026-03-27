@@ -83,7 +83,7 @@ void Load_BotInfo()
 
 	//botlist value
 	botlist = gi.cvar ("botlist", "default", CVAR_SERVERINFO | CVAR_LATCH);
-	gamepath = gi.cvar ("game", "0", CVAR_NOSET);
+	gamepath = gi.cvar ("game", "0", CVAR_LATCH);
 
 	//load info
 	//sprintf(Buff,"%s/3ZBConfig.cfg",gamepath->string);
