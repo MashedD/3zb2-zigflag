@@ -53,18 +53,13 @@ void SelectNextItem (edict_t *ent, int itflags)
 	cl = ent->client;
 
 //ZOID
-	if (cl->chase_target) {
-		ChaseNext(ent);
-		return;
-	}
-
-/*	if (cl->menu) {
+	if (cl->menu) {
 		PMenu_Next(ent);
 		return;
 	} else if (cl->chase_target) {
 		ChaseNext(ent);
 		return;
-	}*/
+	}
 //ZOID
 
 	// scan  for the next valid one
@@ -437,7 +432,7 @@ void Cmd_Use_f (edict_t *ent)
 				return;
 			}
 		}
-		else 
+		else
 		{
 			gi.cprintf (ent, PRINT_HIGH, "Out of item: %s\n", s);
 			return;
@@ -505,7 +500,7 @@ void Cmd_Drop_f (edict_t *ent)
 				return;
 			}
 		}
-		else 
+		else
 		{
 			gi.cprintf (ent, PRINT_HIGH, "Out of item: %s\n", s);
 			return;
@@ -985,7 +980,7 @@ void Cmd_ZoomIn(edict_t *ent)
 		ent->client->zc.distance = 90;
 		ent->client->ps.fov = 90;
 	}
-	
+
 	if(ent->client->zc.distance > 15)
 	{
 		gi.sound (ent, CHAN_AUTO, gi.soundindex("3zb/zoom.wav"), 1, ATTN_NORM, 0);
@@ -1005,20 +1000,20 @@ void Cmd_ZoomOut(edict_t *ent)
 
 //	if(	ent->client->pers.weapon != FindItem("Railgun")) return;
 
-	if(ent->client->zc.aiming != 1 && ent->client->zc.aiming != 3) return;	
+	if(ent->client->zc.aiming != 1 && ent->client->zc.aiming != 3) return;
 
 	if(ent->client->zc.distance < 15 || ent->client->zc.distance > 90)
 	{
 		ent->client->zc.distance = 90;
 		ent->client->ps.fov = 90;
 	}
-	
+
 	if(ent->client->zc.distance < 90)
 	{
 		gi.sound (ent, CHAN_AUTO, gi.soundindex("3zb/zoom.wav"), 1, ATTN_NORM, 0);
 		if(ent->client->zc.distance == 15 ) ent->client->zc.distance = 40;
 		else if(ent->client->zc.distance == 40 ) ent->client->zc.distance = 65;
-		else ent->client->zc.distance = 90;		
+		else ent->client->zc.distance = 90;
 		ent->client->ps.fov = ent->client->zc.distance;
 	}
 }
@@ -1055,7 +1050,7 @@ void UndoChain(edict_t *ent ,int step)
 				rs_trace = gi.trace(Route[i].Pt,ent->mins,ent->maxs,Route[i].Pt,ent,MASK_BOTSOLID);
 
 				if(--count <= 0 && !rs_trace.allsolid && !rs_trace.startsolid) break;
-			}  
+			}
 		}
 
 		gi.cprintf(ent,PRINT_HIGH,"backed %i %i steps.\n",CurrentIndex - i,step);
@@ -1064,7 +1059,7 @@ void UndoChain(edict_t *ent ,int step)
 		VectorCopy(Route[CurrentIndex].Pt,ent->s.old_origin);
 
 		memset(&Route[CurrentIndex],0,sizeof(route_t));
-		if(CurrentIndex > 0) Route[CurrentIndex].index = Route[CurrentIndex - 1].index + 1; 
+		if(CurrentIndex > 0) Route[CurrentIndex].index = Route[CurrentIndex - 1].index + 1;
 	}
 }
 
