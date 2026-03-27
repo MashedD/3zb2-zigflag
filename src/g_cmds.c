@@ -1103,6 +1103,17 @@ void ClientCommand (edict_t *ent)
 		return;
 	}
 
+    if (Q_stricmp (cmd, "store") == 0)
+    {
+        Cmd_Store_f(ent);
+        return;
+    }
+    if (Q_stricmp (cmd, "recall") == 0)
+    {
+        Cmd_Recall_f(ent);
+        return;
+    }
+
 	if (level.intermissiontime)
 		return;
 
@@ -1171,4 +1182,47 @@ void ClientCommand (edict_t *ent)
 //ZOID
 	else	// anything that doesn't match a command will be a chat
 		Cmd_Say_f (ent, false, true);
+}
+
+void Cmd_Store_f (edict_t *ent)
+{
+    if (!ent->client)
+        return;
+
+    if (!sv_cheats->value) {
+        gi.cprintf(ent, PRINT_HIGH, "Not allowed\n");
+        return;
+    }
+
+    VectorCopy(ent->s.origin, ent->client->pers.stored_origin);
+    VectorCopy(ent->client->ps.viewangles, ent->client->pers.stored_angles);
+    ent->client->pers.stored_frame = level.framenum;
+}
+
+void Cmd_Recall_f (edict_t *ent)
+{
+    if (!ent->client)
+        return;
+
+    if (ent->client->pers.stored_frame == 0)
+    {
+        gi.cprintf(ent, PRINT_HIGH, "No valid position stored.\n");
+        return;
+    }
+
+    VectorCopy(ent->client->pers.stored_origin, ent->s.origin);
+    VectorCopy(ent->client->pers.stored_origin, ent->s.old_origin);
+    VectorCopy(ent->client->pers.stored_origin, ent->client->ps.pmove.origin);
+
+    VectorCopy(ent->client->pers.stored_angles, ent->client->ps.viewangles);
+    VectorCopy(ent->client->pers.stored_angles, ent->client->v_angle);
+    VectorCopy(ent->client->pers.stored_angles, ent->s.angles);
+
+    for (int i=0 ; i<3 ; i++)
+        ent->client->ps.pmove.delta_angles[i] = ANGLE2SHORT(ent->client->v_angle[i] - ent->client->resp.cmd_angles[i]);
+
+    VectorCopy(vec3_origin, ent->velocity);
+    VectorCopy(vec3_origin, ent->client->ps.pmove.velocity);
+
+    gi.linkentity(ent);
 }
