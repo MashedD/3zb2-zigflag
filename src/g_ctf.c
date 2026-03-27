@@ -131,6 +131,13 @@ char *ctf_statusbar =
   "stat_string 27 "
 "endif "
 
+// Time remaining
+"if 30 "
+    "xv 200 "
+    "yb -39 "
+    "stat_string 30 "
+"endif "
+
 //sight
 "if 31 "
 "   xv 96 "
