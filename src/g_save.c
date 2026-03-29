@@ -132,6 +132,7 @@ void SetBotFlag1(edict_t *ent);	//チーム1の旗
 void SetBotFlag2(edict_t *ent);  //チーム2の旗
 void InitGame (void)
 {
+	srand((unsigned)time(NULL));
 	gi.dprintf ("==== InitGame ====\n");
 
 	bot_team_flag1 = NULL;
