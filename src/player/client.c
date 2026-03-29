@@ -1023,13 +1023,22 @@ edict_t *SelectFarthestDeathmatchSpawnPoint (void)
 
 edict_t *SelectDeathmatchSpawnPoint (void)
 {
-	if ( (int)(dmflags->value) & DF_SPAWN_FARTHEST)
-		return SelectFarthestDeathmatchSpawnPoint ();
-	else
-		if(fixflaws->value)
-			return SelectRandomDeathmatchSpawnPointAvoidClosest ();
-		else
-			return SelectRandomDeathmatchSpawnPoint ();
+	int i;
+	for (i = 1; i <= maxclients->value; i++)
+	{
+		if (g_edicts[i].inuse && g_edicts[i].health > 0)
+		{
+			if ( (int)(dmflags->value) & DF_SPAWN_FARTHEST)
+				return SelectFarthestDeathmatchSpawnPoint ();
+
+			if(fixflaws->value)
+				return SelectRandomDeathmatchSpawnPointAvoidClosest ();
+			else
+				return SelectRandomDeathmatchSpawnPoint ();
+		}
+	}
+
+	return SelectTrueRandomDeathmatchSpawnPoint();
 }
 
 edict_t *SelectCoopSpawnPoint (edict_t *ent)

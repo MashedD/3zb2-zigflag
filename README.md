@@ -5,6 +5,7 @@
 # Fixes in this fork
 
 - fixed selecting next item in menu (`]` by default)
+- fixed player spawn point (now it is random on map start)
 
 # Changes
 
