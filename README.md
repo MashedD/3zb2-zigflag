@@ -79,7 +79,6 @@ Review scripts before executing them.
 - replace configs with new ones
 - README.md: update
 - TDM: don't retaliate on rocket damage
-- TDM: see if there's a way how to autobalance bots
 
 # Old part of README.md below
 
