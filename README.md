@@ -1,45 +1,62 @@
-# ZigFlag - Custom 3rd Zigock Bot II for Quake II
+# 3zb2-zigflag
 
-**Pull Requests are welcomed!**
+A custom port of the **3rd Zigock Bot II** mod for Quake II, with the **ZigFlag (Capture and Hold)** game mode, bugfixes, and enhancements from various sources including `tastyspleen`, `yquake2`, `OpenTDM`, and `OpenFFA`.
 
-# Fixes in this fork
+Originally built for nostalgia of the 90's Quake II deathmatch servers, this mod keeps the look and feel of the original game while adding a polished multiplayer experience with some of the best bots available for the Quake II engine.
 
-- fixed selecting next item in menu (`]` by default)
-- fixed player spawn point (now it is random on map start)
+> [Yamagi Quake II](https://github.com/yquake2/yquake2) is the recommended client. Also compatible with [vkQuake2](https://github.com/kondrak/vkQuake2) and [Q2Pro](https://github.com/MashedD/q2pro).
 
-# Changes
+## Screenshots
 
-- new: added `store` command to save player position, similar as in Jump mod
-- new: added `recall` command to restore player position. If player dies then moves to spawn point
-- added showing remaining time for all game modes
-- add basic "low effort version" of TeamDeathmatch option (`set tdm 1; set ctf 1`)
-- replaced configs
+![Capture and Hold](screenshot/screenshot.png)
+![Capture and Hold](screenshot/screenshot2.png)
 
-# Notes
+## Features
 
-- loading `exec addbot.cfg` is useful for spawning bots with key letters or commands - like `spawn1`, or `despawn1`
-    - use Numpad Plus key to increase number of bots and Numpad Enter spawn them or use command like `spawn1`
-- spawning sound if different than usual
-- to play CTF: `exec config-ctf`
-- when `set zigrapple 1` is set, use `use grapple` to change weapon to grappling hook
-- use `kill` command to die. There's a cool off period. Useful for learning spawn points
-- use `drop tech` to drop tech
-- use `drop flag` to drop flag
-- some models are missing (like grappling hook). You need to copy pak from `ctf` mod
+### ZigFlag (Capture and Hold)
 
-# Building
+The premise is simple: **get the flag and keep it**. Plays on standard Deathmatch maps.
 
-## Prerequisites
+- Simple HUD enhancements with optional combat HUD, player identification, and rank/timer display
+- Automatic bot control and autospawning at level start
+- Visual and audio notifications for flag holders
+- Customized dogtags on scoreboard
+- Optional flag respawn, frag bonus, and health drain from subdued holders
+- Optional auto weapon switching, respawn protection, and grapple
+- Skin and model teams with bonuses/penalties on flag possession and friendly fire
 
-Dependencies might be missing and some are probably excessive.
-I didn't optimize this as it's time/cost not effective for me.
-Best might be to use Docker for the job.
+### General
+
+- `store` / `recall` commands to save and restore player position (Jump mod style)
+- Remaining time display for all game modes
+- Basic Team Deathmatch support (`set tdm 1; set ctf 1`)
+- Random player spawn points on map start
+- Fixed menu item selection
+- Improved aim (`aimfix`), Quake 2 gameplay flaw fixes (`fixflaws`)
+
+See [CONFIG.md](CONFIG.md) for full configuration details.
+
+## Installation
+
+1. Download the latest release from [Releases](https://github.com/MashedD/3zb2-zigflag/releases).
+2. Extract the mod files into your Quake II directory alongside other mods (e.g., `baseq2`, `ctf`).
+3. Some features require assets from the base game:
+   - **CTF / Grapple**: Copy `ctf/pak*.pak` into the `3zb2/` directory. Rename existing pak files to avoid conflicts (e.g., `pakX.pak`).
+   - **Mission Pack 1 (Reckoning)**: Copy `xatrix/pak0.pak` into `3zb2/`.
+
+### Quick Start
+
+Place route chain files (`.chn`) in `3zb2/chdtm/` for bot navigation on your maps. Many popular maps are included. Additional routes can be created in-game via the `chedit` command (see [CONFIG.md](CONFIG.md)).
+
+## Building from Source
+
+### Prerequisites
 
 ```bash
-# Tested on CachyOS
+# Arch / CachyOS
 sudo pacman -S cmake gcc
 
-# For cross compilation
+# Cross-compilation (Windows targets)
 sudo pacman -S \
     mingw-w64-tools \
     mingw-w64-binutils \
@@ -58,203 +75,62 @@ paru -S \
     mingw-w64-zstd
 ```
 
-## Compilation
+### Compilation
 
-Review scripts before executing them.
+Review build scripts before executing.
 
 ```bash
 ./build-lin64.sh
+
 ./clean.sh
 ./build-win32.sh
+
 ./clean.sh
 ./build-win64.sh
 ```
 
-# TODO
+## Bot Commands
 
-- fix compilation warnings
-- README.md: update
-- TDM: teammates shouldn't retaliate on (rocket or any) damage
+Use `exec addbot.cfg` to load predefined bot configurations. Bots can then be spawned with commands like `spawn1` or `despawn1`.
 
-# Old part of README.md below
+| Input | Action |
+|-------|--------|
+| `KP_PLUS` | Increase bot count |
+| `KP_MINUS` | Decrease bot count |
+| `KP_ENTER` | Spawn/remove bots |
 
-This is a custom port of the 3rd Zigock Bot II to Quake II - Yamagi Quake II is recommended.  \
-All warnings (up to GCC9) and unused variables have been addressed in the original source. \
-The code also has handpicked backport fixes, enhancements and features applied from various \
-sources: `tastyspleen`, `yquake2`, `OpenTDM`, `OpenFFA` and many custom.
+Console commands:
 
-Also works with Vulkan Quake II (vkQuake2): https://github.com/kondrak/vkQuake2/issues/103
+```
+sv spb $    # Spawn $ bots
+sv rmb $    # Remove $ bots
+```
 
-This was modified for my own use and driven by nostalgia for the Quake II servers of the 90's. \
-There are many heavily modified versions of the Quake II engine, this mod tries to keep the look and feel of \
-the original game deathmatch, but allows a multiplayer experience with some of the best bots for the Quake II\
-engine. I couldn't locate any `Capture and Hold` servers on [q2servers](http://q2servers.com), so this offered the opportunity to rekindle \
-a firm favourite via the `zigmode` modification.
+## Common Configuration
 
-Tip of the hat to `Ponpoko`, original mod author and bot creator.
-
-Bot chaining routes are supplied, further routes can be (re)created via the mod command `chedit` (See `CONFIG.txt`)
-
-### ZigMode ZigFlag (Capture and Hold) - https://zigflag.net
-
-The premise is simple: **Get the flag and keep it** - *plays on standard Deathmatch maps*.
-
-The original `zigmode` was released belated, buggy and only half implemented, I attempted to make this feature a little \
-more refined, just for fun. I was trying to keep the look and feel of the original deathmatch, but with a few bells and \
-whistles. However `zigflag` turned into a fairly customised game.
-
-* Simple HUD enhancements.
-* Automatic bot control.
-* Autospawn bots at level start.
-* Visual/Audio notifications to Flagholder.
-* Customised dogtags displayed on scoreboard.
-* Optional Flag respawn feature.
-* Optional Flagholder frag bonus.
-* Optional Flag sucks health from subdued holder.
-* Optional auto weapon switching on upgrade.
-* Optional identified generic gameplay fixes.
-* Optional respawn protection.
-* Optional spawn bots at distance.
-* Optional grapple.
-* Optional HUD playerid.
-* Optional enhanced HUD.
-
-... and many bugfixes was the final outcome of playing around with the code.
-
-A ZigFlag server can sometimes be found running at `quake2://quake.zigflag.net:27910` 
-
-The mod also supports skin and model teams with appropriate bonuses and penalties on Flag possession and `FRIENDLY_FIRE`.
-
-The changes subtly alter the game dynamics and improve on the original zigmode game element, IMHO. \
-The original gameplay, with bugfixes, can still be enabled by disabling the new elements via cvars.
-
-`Capture and Hold` plays best on smaller level maps with a timelimit, no fraglimit and a couple of bots.
-
-### Pak file (Flag model) and Route Chaining files
-
-`ZigMode` requires the included small `.pak` file, for the flag model, and route chaining files for the maps. \
-Many popular maps are included, further route chaining `.chn` files can be created via the mod `chedit` function.
-
-#### Example config file for ZigFlag:
+Example server config for ZigFlag:
 
 ```
 exec addbot.cfg
+exec configs-ctf.cfg
 set zigmode 1
 set zigspawn 1
 set zigkiller 1
-set zigrapple 0
-set zigintro 0
-set ctf 0
-set aimfix 1
-set combathud 1
-set spawnbotfar 1
-set killerflag 1
-set fixflaws 1
-set playerid 1
-set weaponswap 1
-set botlist default
-set autospawn 3
-set autobot 0
-set vwep 1
-set maxclients 16
-set respawn_protection 1
-set dmflags 16384
-set fraglimit 30
-set timelimit 10
-set maplist q2dm
-map q2dm1
+map q2ctf1
 ```
 
-See <CONFIG.md> for further details.
+## Known Issues
 
-## Bot commands (See full details in CONFIG.md)
+- The mod may lock up or segfault when using `gamemap`. Use `map` (full level reset) instead. On Q2Pro, set `sv_allow_map 1` to allow this.
+- Some models (e.g., grappling hook) are missing and require copying `pak` files from the `ctf` mod.
 
-By default use: `KP_PLUS`, `KP_MINUS` & `KP_ENTER` for bot control
+## Credits
 
-`Console`
+- **Ponpoko** - Original 3rd Zigock Bot II mod author and bot creator
+- DirtBagXon - developer
+- Contributors and backport sources: tastyspleen, yquake2, OpenTDM, OpenFFA
 
-Spawn `$` bots via:
+## License
 
-    sv spb $
-
-Remove `$` bots via:
-
-    sv rmb $
-
-## Other features (See full details in CONFIG.txt)
-
-Improved aim, enable `1` (default) or disable `0` via:
-
-    aimfix 1
-
-Fix noted Quake 2 gameplay flaws (opentdm), enable `1` (default) or disable `0` via:
-
-    fixflaws 1
-
-Flag takes health from a subdued holder, anti-camping, enable `1` (default) or disable `0`:
-
-    killerflag 1
-
-**Stay-in-the-fray** to avoid penalty.
-
-Identify player in the crosshair, enable `1` or disable `0` (default)
-
-    playerid 1
-
-Display extra (rank, timer) information in HUD:
-
-    combathud 1
-
-Auto switch to upgraded weapon on pickup, enable `1` or disable `0` (default):
-
-    weaponswap 1
-
-Option to add grapple to the fray - CTF `pak0.pak` required.
-
-    zigrapple 1
-
-Add spectator mode to game start (server mode)
-
-    zigintro 1
-
-`Capture and Hold (ZigFlag)` mode for Deathmatch/Team games:
-
-    zigmode 1
-    zigspawn 1
-    zigkiller 1
-
-Broadcast the summary of the top six players, in console, at level intermission:
-
-    ----------------
-    | q2dm1 | ~ 02 |
-    ------------------------------------------------------
-    | X | Player           |  S  |  P  |  T  |  F  |  A  |
-    ------------------------------------------------------
-    | * | [BOT]Batty       | 30  | 0   | 8   | +8  | +0  |
-    |   | [BOT]Chews       | 26  | 0   | 8   | +0  | +2  |
-    | F | [BOT]Lupin       | 21  | 0   | 8   | +3  | +2  |
-    |   | _GONZO_          | 6   | 19  | 8   | +6  | +0  |
-    ------------------------------------------------------
-
-**S** - *Score* \
-**P** - *Ping* \
-**T** - *Time* \
-**F** - *Flag Possession bonuses* \
-**A** - *Assassinations of Flagholder* \
-**~** - *Flag bounce occurrences*
-
-## Errata
-
-The mod has a random issues using `gamemap`, resulting in a lockup or segfault. Bot tracing in \
-`SV_RunThink()` seems to be the related area, but I have yet to track down. Use the `map` command which \
-causes a full level reset to overcome the issue. Note: **Q2Pro** attempts to enforce the use of \
-`gamemap`, use `sv_allow_map 1` in Q2Pro to overcome this:
-
-    map q2dm1
-
-
-## 獄
-
-![captureandhold](screenshot/screenshot.png)
-![captureandhold](screenshot/screenshot2.png)
+Id Software Quake II Source Code License. See [LICENSE](LICENSE) for details.
 
