@@ -165,9 +165,9 @@ set maplist q2dm
 map q2dm1
 ```
 
-See `CONFIG.txt` for further details.
+See <CONFIG.md> for further details.
 
-## Bot commands (See full details in CONFIG.txt)
+## Bot commands (See full details in CONFIG.md)
 
 By default use: `KP_PLUS`, `KP_MINUS` & `KP_ENTER` for bot control
 
