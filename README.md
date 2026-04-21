@@ -54,7 +54,7 @@ Place route chain files (`.chn`) in `3zb2/chdtm/` for bot navigation on your map
 
 ```bash
 # Arch / CachyOS
-sudo pacman -S cmake gcc
+sudo pacman -S cmake gcc sstrip
 
 # Cross-compilation (Windows targets)
 sudo pacman -S \
@@ -67,11 +67,9 @@ sudo pacman -S \
 paru -S \
     mingw-w64-zlib \
     mingw-w64-zlib-ng \
-    mingw-w64-ffmpeg \
     mingw-w64-pkg-config \
     mingw-w64-libpng \
     mingw-w64-libjpeg-turbo \
-    mingw-w64-openal \
     mingw-w64-zstd
 ```
 

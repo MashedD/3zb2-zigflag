@@ -10,4 +10,6 @@ make CC=i686-w64-mingw32-gcc \
      OSTYPE=Windows_NT \
      -j$(nproc)
 mv release/game.so release/gamex86.dll
+chmod -x release/gamex86.dll
+i686-w64-mingw32-strip release/gamex86.dll
 
