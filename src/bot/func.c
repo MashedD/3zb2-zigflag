@@ -558,20 +558,8 @@ void PutBotInServer (edict_t *ent)
 		ent->client->resp.spawnframe = level.framenum;
 	}
 
-	if(ent->client->resp.enterframe == level.framenum && !chedit->value)
-	{
-		gi.WriteByte (svc_muzzleflash);
-		gi.WriteShort (ent-g_edicts);
-		gi.WriteByte (MZ_LOGIN);
-		gi.multicast (ent->s.origin, MULTICAST_PVS);
-	}
-	else if(!chedit->value)
-	{
-		gi.WriteByte (svc_muzzleflash);
-		gi.WriteShort (ent-g_edicts);
-		gi.WriteByte (MZ_RESPAWN);
-		gi.multicast (ent->s.origin, MULTICAST_PVS);
-	}
+	if(!chedit->value)
+		ent->s.event = EV_PLAYER_TELEPORT;
 
 
 	if(zigrapple->value)
@@ -654,10 +642,7 @@ qboolean SpawnBot(int i)
 		gi.linkentity (bot);
 //		bot->s.modelindex = 0;
 
-		gi.WriteByte (svc_muzzleflash);
-		gi.WriteShort (bot-g_edicts);
-		gi.WriteByte (MZ_LOGIN);
-		gi.multicast (bot->s.origin, MULTICAST_PVS);
+		bot->s.event = EV_PLAYER_TELEPORT;
 
 		ent = &g_edicts[1];
 		if(ent->inuse && ent->client && !(ent->svflags & SVF_MONSTER))
