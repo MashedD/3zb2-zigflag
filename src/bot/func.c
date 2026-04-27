@@ -918,7 +918,7 @@ pmenu_t zgjoinmenu[] = {
 	{ "zeta",				PMENU_ALIGN_LEFT, NULL, ClientJoinAsAlpha },
 	{ "eta",				PMENU_ALIGN_LEFT, NULL, ClientJoinAsAlpha },
 	{ NULL,					PMENU_ALIGN_LEFT, NULL, NULL },
-	{ "Use [ to move cursor",	PMENU_ALIGN_LEFT, NULL, NULL },
+	{ "Use [ and ] to move cursor",	PMENU_ALIGN_LEFT, NULL, NULL },
 	{ "ENTER to select class",	PMENU_ALIGN_LEFT, NULL, NULL },
 	{ "ESC to Exit Menu",	PMENU_ALIGN_LEFT, NULL, NULL },
 	{ "(TAB to Return)",	PMENU_ALIGN_LEFT, NULL, NULL },
