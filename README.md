@@ -125,7 +125,7 @@ map q2ctf1
 ## Credits
 
 - **Ponpoko** - Original 3rd Zigock Bot II mod author and bot creator
-- DirtBagXon - developer
+- **DirtBagXon** - developer
 - Contributors and backport sources: tastyspleen, yquake2, OpenTDM, OpenFFA
 
 ## License

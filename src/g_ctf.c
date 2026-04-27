@@ -248,6 +248,12 @@ void CTFInit(void)
 
     tdm = gi.cvar("tdm", "0", CVAR_SERVERINFO);
 
+	if (tdm->value && !ctf->value)
+	{
+		gi.cvar_set("ctf", "1");
+		ctf->value = 1;
+	}
+
 	if (!flag1_item)
 		flag1_item = FindItemByClassname("item_flag_team1");
 	if (!flag2_item)
