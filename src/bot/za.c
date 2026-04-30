@@ -697,9 +697,11 @@ void Bot_SearchItems (edict_t *ent)
 				{
 					if(entcln[7] == 's' && entcln[8] == 'h' )	//weapon_shotgun
 					{
-						if(!wstayf || (wstayf && !pickup_pri 
-							&& (!ent->client->pers.inventory[ITEM_INDEX(Fdi_SHOTGUN/*FindItem("Shotgun")*/)] 
-							|| trent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM) ) )) target = trent;
+						qboolean isDropped = (trent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM)) != 0;
+						if(!wstayf || (wstayf && (!pickup_pri || isDropped))) {
+							if(!ent->client->pers.inventory[ITEM_INDEX(Fdi_SHOTGUN)] || isDropped)
+								target = trent;
+						}
 					}
 					else if(entcln[7] == 's')					//weapon_supershotgun
 					{
@@ -726,10 +728,12 @@ void Bot_SearchItems (edict_t *ent)
 						|| trent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM)))) target = trent;
 					}
 					else if(entcln[7]=='r' && entcln[8] == 'o')	//weapon_rocketlauncher
-						{
-						if(!wstayf || (wstayf 
-							&& (!ent->client->pers.inventory[ITEM_INDEX(Fdi_ROCKETLAUNCHER/*FindItem("Rocket Launcher")*/)]
-							|| trent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM)))) target = trent;
+					{
+						qboolean isDropped = (trent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM)) != 0;
+						if(!wstayf || (wstayf && (!pickup_pri || isDropped))) {
+							if(!ent->client->pers.inventory[ITEM_INDEX(Fdi_ROCKETLAUNCHER)] || isDropped)
+								target = trent;
+						}
 					}
 					else if(entcln[7] == 'h')					//weapon_hyperblaster
 					{
@@ -757,9 +761,11 @@ void Bot_SearchItems (edict_t *ent)
 					}
 					else if(entcln[7] == 'b')					//weapon_bfg
 					{
-						if(!wstayf || (wstayf 
-							&& (!ent->client->pers.inventory[ITEM_INDEX(Fdi_BFG/*FindItem("BFG10K")*/)]
-							|| trent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM)))) target = trent;					
+						qboolean isDropped = (trent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM)) != 0;
+						if(!wstayf || (wstayf && (!pickup_pri || isDropped))) {
+							if(!ent->client->pers.inventory[ITEM_INDEX(Fdi_BFG)] || isDropped)
+								target = trent;
+						}
 					}
 				}
 				else if(entcln[0] == 'R' && !ent->client->zc.route_trace)
@@ -834,7 +840,17 @@ void Bot_SearchItems (edict_t *ent)
 			}
 			if(target != NULL && !ctf->value )
 			{
-				if((target->s.origin[2] - ent->s.origin[2]) > 32  && !q)
+				qboolean isWeapon = (target->classname[0] == 'w');
+				qboolean isDroppedWeapon = isWeapon && (target->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM));
+				float distToTarget = 0;
+				vec3_t distVec;
+				VectorSubtract(target->s.origin, ent->s.origin, distVec);
+				distToTarget = VectorLength(distVec);
+				
+				if(isDroppedWeapon && distToTarget < 150) {
+					// Very close dropped weapon - always pick up
+				}
+				else if((target->s.origin[2] - ent->s.origin[2]) > 32  && !q)
 				{
 					x = target->moveinfo.start_origin[2] - ent->s.origin[2];
 					if(x > 54 || x < -24) target = NULL;
@@ -2994,8 +3010,19 @@ gi.bprintf(PRINT_HIGH,"OFF 5\n"); //ppx
 		k = false;
 
 		zc->secondinterval++;
+		
+		qboolean needBetterWeapon = false;
+		int mywep = Get_KindWeapon(ent->client->pers.weapon);
+		if(mywep <= WEAP_BLASTER || mywep == WEAP_GRENADES) {
+			needBetterWeapon = true;
+		}
+		
+		int searchInterval = 40;
+		if(zc->first_target == NULL) searchInterval = 20;
+		if(needBetterWeapon) searchInterval = 10;
+		
 		//when tracing routes
-		if(zc->route_trace && zc->secondinterval > 40)
+		if(zc->route_trace && zc->secondinterval > searchInterval)
 		{
 			for(i = zc->routeindex ; i < (zc->routeindex + 20); i++)
 			{
