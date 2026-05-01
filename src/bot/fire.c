@@ -1537,7 +1537,36 @@ void Combat_Level0(edict_t *ent,int foundedenemy,int enewep
 	
 	//-----------------------------------------------------------------------
 	//プライオリティ
-	//-----------------------------------------------------------------------	
+	//-----------------------------------------------------------------------
+
+	if(zc->threat_level > 0.7f && ent->health > 50)
+	{
+		if(distance > 200 && distance < 600)
+		{
+			if(B_UseRocket(ent,target,enewep,aim * 0.8,distance,skill)) goto FIRED;
+		}
+	}
+
+	if(zc->nearby_enemies >= 3 && distance < 500)
+	{
+		if(B_UseBfg(ent,target,enewep,aim * 0.7,distance,skill)) goto FIRED;
+		if(distance < 400 && (target->s.origin[2] - ent->s.origin[2]) < 100)
+		{
+			if(B_UseGrenadeLauncher(ent,target,enewep,aim * 0.8,distance,skill)) goto FIRED;
+		}
+	}
+
+	if(ent->health < 40 && distance < 300)
+	{
+		if(B_UseSuperShotgun(ent,target,enewep,aim * 0.7,distance,skill)) goto FIRED;
+		if(B_UseShotgun(ent,target,enewep,aim * 0.7,distance,skill)) goto FIRED;
+	}
+
+	if(target->s.origin[2] > ent->s.origin[2] + 100 && distance < 800)
+	{
+		if(B_UseRocket(ent,target,enewep,aim * 0.85,distance,skill)) goto FIRED;
+	}
+
 	//BFG
 	if(distance > 200)
 	{

@@ -1517,6 +1517,26 @@ void Set_Combatstate(edict_t *ent,int foundedenemy)
 	//enemy's weapon
 	enewep = Get_KindWeapon(target->client->pers.weapon);
 
+	//threat assessment (only when not already in a combat mode)
+	if(client->zc.battlemode == 0)
+	{
+		int threatResult = Bot_AssessThreat(ent, target, foundedenemy, distance);
+		client->zc.last_threat_check = level.time;
+
+		if(threatResult > 0 && foundedenemy <= 2)
+		{
+			if(distance < 600 && ent->groundentity && (9 * random()) < combskill)
+			{
+				client->zc.battlemode |= FIRE_RUSH;
+				client->zc.battlecount = 8 + (int)(8 * random());
+			}
+		}
+	}
+	else
+	{
+		Bot_AssessThreat(ent, target, foundedenemy, distance);
+	}
+
 	//status set
 	aim = 10.0 - (float)Bot[client->zc.botindex].param[BOP_AIM];
 	if(aim <= 0 || aim > 10) aim = 5; 
@@ -1534,6 +1554,44 @@ void Set_Combatstate(edict_t *ent,int foundedenemy)
 		VectorCopy(client->zc.first_target->s.origin,client->zc.last_pos);
 	}
 	return;
+}
+
+int Bot_AssessThreat(edict_t *ent, edict_t *target, int foundedenemy, float distance)
+{
+	int myHealth = ent->health;
+	int myArmor = ent->client->pers.inventory[ITEM_INDEX(FindItem("Jacket Armor"))]
+				+ ent->client->pers.inventory[ITEM_INDEX(FindItem("Combat Armor"))]
+				+ ent->client->pers.inventory[ITEM_INDEX(FindItem("Body Armor"))];
+	int myWeapon = Get_KindWeapon(ent->client->pers.weapon);
+	int myPower = myHealth + (myArmor * 2) + (myWeapon * 15);
+
+	int enemyHealth = target->health;
+	int enemyArmor = target->client->pers.inventory[ITEM_INDEX(FindItem("Jacket Armor"))]
+				+ target->client->pers.inventory[ITEM_INDEX(FindItem("Combat Armor"))]
+				+ target->client->pers.inventory[ITEM_INDEX(FindItem("Body Armor"))];
+	int enemyWeapon = Get_KindWeapon(target->client->pers.weapon);
+	int enemyPower = enemyHealth + (enemyArmor * 2) + (enemyWeapon * 15);
+
+	if(enemyPower <= 0) enemyPower = 1;
+	if(myPower <= 0) myPower = 1;
+
+	float threatRatio = (float)enemyPower / (float)myPower;
+	if(threatRatio < 0.5f) threatRatio = 0.5f;
+	if(threatRatio > 2.5f) threatRatio = 2.5f;
+
+	ent->client->zc.threat_level = threatRatio / 2.5f;
+	ent->client->zc.nearby_enemies = foundedenemy;
+
+	if(ent->client->invincible_framenum > level.time && threatRatio > 0.8f)
+		return 1;
+
+	if(myWeapon == WEAP_BFG && distance > 300 && myHealth > 80)
+		return 1;
+
+	if(myHealth > enemyHealth + 60 && myWeapon >= enemyWeapon && myHealth > 100)
+		return 1;
+
+	return 0;
 }
 
 //-----------------------------------------------------------------------------------------
@@ -5938,6 +5996,9 @@ ent->velocity[1] = 800 * (random() - 0.5);
 ent->client->ps.pmove.pm_flags |= PMF_DUCKED;
 */
 	ent->client->zc.trapped = false;		//trapcatch clear
+
+	if(ent->client->zc.oldyaw == 0)
+		ent->client->zc.oldyaw = ent->s.angles[YAW];
 
 	gi.linkentity (ent);
 	G_TouchTriggers (ent);
