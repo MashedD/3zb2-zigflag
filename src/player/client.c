@@ -2473,6 +2473,23 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 		// perform a pmove
 		gi.Pmove (&pm);
 
+		// mid-air crouch support (optional, triggered by +movedown)
+		if (!pm.groundentity && pm.waterlevel == 0 && pm.s.pm_type == PM_NORMAL)
+		{
+			if (pm.cmd.upmove < 0)
+			{
+				pm.s.pm_flags |= PMF_DUCKED;
+				pm.viewheight = 8;
+				pm.maxs[2] = 16;
+			}
+			else
+			{
+				pm.s.pm_flags &= ~PMF_DUCKED;
+				pm.viewheight = 22;
+				pm.maxs[2] = 32;
+			}
+		}
+
 		// save results of pmove
 		client->ps.pmove = pm.s;
 		client->old_pmove = pm.s;
