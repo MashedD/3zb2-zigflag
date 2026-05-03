@@ -1238,8 +1238,14 @@ int Bot_Watermove ( edict_t *ent,vec3_t pos,float dist,float upd)
 		if(rs_trace.fraction > 0)
 		{
 			VectorCopy(rs_trace.endpos,pos);
-			return true;
 			if(upd < 0) ent->velocity[2] = 0;
+			if(dist > 0)
+			{
+				float wyaw = ent->client->zc.moveyaw * M_PI * 2 / 360;
+				ent->velocity[0] = cos(wyaw) * dist;
+				ent->velocity[1] = sin(wyaw) * dist;
+			}
+			return true;
 		}
 	}
 //gi.bprintf(PRINT_HIGH,"Water MOVE NG %f %f!\n",dist,upd);
@@ -1293,6 +1299,12 @@ int Bot_Watermove ( edict_t *ent,vec3_t pos,float dist,float upd)
 //gi.bprintf(PRINT_HIGH,"Water MOVE OK %f %f!\n",dist,upd);
 	VectorCopy(trmax,pos);
 	if(upd < 0) ent->velocity[2] = 0;
+	if(dist > 0)
+	{
+		float wyaw = ent->client->zc.moveyaw * M_PI * 2 / 360;
+		ent->velocity[0] = cos(wyaw) * dist;
+		ent->velocity[1] = sin(wyaw) * dist;
+	}
 	return true;
 	
 	touchmin[0] = cos(vec) * 16;//dist ;
@@ -5984,7 +5996,11 @@ VCHCANSEL_L:
 	}
 	else
 	{
-		if(ent->waterlevel > 2) {ent->velocity[0] = 0;ent->velocity[1] = 0;/*VectorClear(ent->velocity);*/}
+		if(ent->waterlevel > 2)
+		{
+			ent->velocity[0] *= 0.5;
+			ent->velocity[1] *= 0.5;
+		}
 		else if(ent->waterlevel && !ent->groundentity && ent->velocity[2] < 0) VectorClear(ent->velocity);//ent->velocity[2] = 0; 
 	}
 //ZOID
