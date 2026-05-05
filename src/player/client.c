@@ -476,6 +476,8 @@ void TossClientWeapon (edict_t *self)
 		item = NULL;
 	if (item && (strcmp (item->pickup_name, "Blaster") == 0))
 		item = NULL;
+	if (item && instagib && instagib->value)
+		item = NULL;
 
 	if (!((int)(dmflags->value) & DF_QUAD_DROP))
 		quad = false;
@@ -721,14 +723,27 @@ void InitClientPersistant (gclient_t *client)
 //	item = FindItem("Trap");
 //	client->pers.inventory[ITEM_INDEX(item)] = 100;
 //test
-	item = /*Fdi_BLASTER;//*/FindItem("Blaster");
-	client->pers.selected_item = ITEM_INDEX(item);
-	client->pers.inventory[client->pers.selected_item] = 1;
+	if (instagib && instagib->value)
+	{
+		item = FindItem("Railgun");
+		client->pers.selected_item = ITEM_INDEX(item);
+		client->pers.inventory[client->pers.selected_item] = 1;
 
-	client->pers.weapon = item;
+		client->pers.weapon = item;
+		client->pers.lastweapon = item;
+		client->pers.inventory[ITEM_INDEX(FindItem("Slugs"))] = 50;
+	}
+	else
+	{
+		item = /*Fdi_BLASTER;//*/FindItem("Blaster");
+		client->pers.selected_item = ITEM_INDEX(item);
+		client->pers.inventory[client->pers.selected_item] = 1;
+
+		client->pers.weapon = item;
 //ZOID
-	client->pers.lastweapon = item;
+		client->pers.lastweapon = item;
 //ZOID
+	}
 
 //ZOID
 	item = FindItem("Grapple");

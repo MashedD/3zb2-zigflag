@@ -418,10 +418,23 @@ void PutBotInServer (edict_t *ent)
 
 	//current weapon
 	client = ent->client;
-	item = Fdi_BLASTER;//FindItem("Blaster");
-	client->pers.selected_item = ITEM_INDEX(item);
-	client->pers.inventory[client->pers.selected_item] = 1;
-	client->pers.weapon = item;
+
+	if (instagib && instagib->value)
+	{
+		item = FindItem("Railgun");
+		client->pers.selected_item = ITEM_INDEX(item);
+		client->pers.inventory[client->pers.selected_item] = 1;
+		client->pers.weapon = item;
+		client->pers.inventory[ITEM_INDEX(FindItem("Slugs"))] = 50;
+	}
+	else
+	{
+		item = Fdi_BLASTER;//FindItem("Blaster");
+		client->pers.selected_item = ITEM_INDEX(item);
+		client->pers.inventory[client->pers.selected_item] = 1;
+		client->pers.weapon = item;
+	}
+
 	client->silencer_shots = 0;
 	client->weaponstate = WEAPON_READY;
 	client->newweapon = NULL;
