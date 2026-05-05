@@ -1618,6 +1618,14 @@ void PutClientInServer (edict_t *ent)
 		client->resp.spawnframe = level.framenum;
 	}
 
+	if (client->pers.stored_frame == 0)
+	{
+		VectorCopy(ent->s.origin, client->pers.stored_origin);
+		VectorCopy(client->ps.viewangles, client->pers.stored_angles);
+		client->pers.stored_frame = level.framenum;
+		if (client->pers.stored_frame == 0)
+			client->pers.stored_frame = 1;
+	}
 }
 
 /*
