@@ -895,6 +895,8 @@ to other players
 
 edict_t *SelectTrueRandomDeathmatchSpawnPoint(void)
 {
+	if (level.numspawns == 0)
+		return NULL;
 	return level.spawns[rand_uniform(level.numspawns)];
 }
 
@@ -903,6 +905,9 @@ edict_t *SelectRandomDeathmatchSpawnPointAvoidClosest (void)
 	edict_t *spot, *spot1, *spot2;
 	float   range, range1, range2;
 	int     i;
+
+	if (level.numspawns <= 2)
+		return SelectTrueRandomDeathmatchSpawnPoint();
 
 	range1 = range2 = 99999;
 	spot1 = spot2 = NULL;
