@@ -1244,8 +1244,9 @@ char *dm_statusbar =
 
 // Time remaining
 "if 30 "
-    "xv 200 "
-    "yb -39 "
+    "xr -50 "
+    "yb -65 "
+    "xv 105 "
     "stat_string 30 "
 "endif "
 
@@ -1350,8 +1351,9 @@ char *zig_statusbar =
 
 // countdown
 "if 30"
-  "xv 200 "
-  "yb -39 "
+  "xr -50 "
+  "yb -65 "
+  "xv 105 "
   "stat_string 30 "
 "endif "
 

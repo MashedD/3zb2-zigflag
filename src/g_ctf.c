@@ -126,8 +126,9 @@ char *ctf_statusbar =
 
 // Time remaining
 "if 30 "
-    "xv 200 "
-    "yb -39 "
+    "xr -50 "
+    "yb -65 "
+    "xv 105 "
     "stat_string 30 "
 "endif "
 
