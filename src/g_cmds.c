@@ -292,9 +292,12 @@ void Cmd_Give_f (edict_t *ent)
 		it_ent = G_Spawn();
 		it_ent->classname = it->classname;
 		SpawnItem (it_ent, it);
-		Touch_Item (it_ent, ent, NULL, NULL);
 		if (it_ent->inuse)
-			G_FreeEdict(it_ent);
+		{
+			Touch_Item (it_ent, ent, NULL, NULL);
+			if (it_ent->inuse)
+				G_FreeEdict(it_ent);
+		}
 	}
 }
 
