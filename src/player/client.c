@@ -228,7 +228,7 @@ const int mod_to_frag[64] = {
 
 void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
 {
-	int			mod;
+	int			mod = meansOfDeath & ~MOD_FRIENDLY_FIRE;
 	char		*message;
 	char		*message2;
 	qboolean	ff, fk;
