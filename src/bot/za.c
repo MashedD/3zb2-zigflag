@@ -2675,10 +2675,21 @@ DCHCANC://しゃがみっぱなし
 	{
 		if( !ent->waterlevel )
 		{
-			if(chedit->value || !Bot[zc->botindex].param[BOP_WALK] || !ent->groundentity) dist = MOVE_SPD_RUN * ent->moveinfo.speed;
-			else dist = MOVE_SPD_WALK * ent->moveinfo.speed;
+			qboolean in_combat = (zc->first_target != NULL);
+			qboolean low_hp    = (ent->health < 50);
+			qboolean roll_run  = (random() < 0.25f);
+
+			if (chedit->value
+			    || !Bot[zc->botindex].param[BOP_WALK]
+			    || !ent->groundentity
+			    || in_combat
+			    || low_hp
+			    || roll_run)
+				dist = MOVE_SPD_RUN  * ent->moveinfo.speed;
+			else
+				dist = MOVE_SPD_WALK * ent->moveinfo.speed;
 		}
-		else 
+		else
 		{
 			if(ent->groundentity && ent->waterlevel < 2 ) dist = MOVE_SPD_RUN * ent->moveinfo.speed;
 			else dist = MOVE_SPD_WATER * ent->moveinfo.speed; 
