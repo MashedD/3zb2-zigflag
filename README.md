@@ -10,6 +10,7 @@ Originally built for nostalgia of the 90's Quake II deathmatch servers, this mod
 
 ![Capture and Hold](screenshot/screenshot.png)
 ![Capture and Hold](screenshot/screenshot2.png)
+![q2pro: Deathmatch on q2deck with instagib](screenshot/screenshot3.png)
 
 ## Features
 
