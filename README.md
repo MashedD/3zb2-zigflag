@@ -29,12 +29,21 @@ The premise is simple: **get the flag and keep it**. Plays on standard Deathmatc
 
 - `store` / `recall` commands to save and restore player position (Jump mod style)
 - Remaining time display for all game modes
-- Basic Team Deathmatch support (`set tdm 1; set ctf 1`)
+- Basic Team Deathmatch support (`set tdm 1`)
 - Instagib option (`set instagib 1`)
 - Random player spawn points on map start
 - Fixed menu item selection
 - Improved aim (`aimfix`), Quake 2 gameplay flaw fixes (`fixflaws`)
 - Use `accuracy` or `stats` and `stats-all` to display stats
+- `set announcer 1` for Unreal Tournament like messages and announcements.
+  Create `sound/announcer` folder and place there files:
+    - doublekill.wav
+    - megakill.wav
+    - monsterkill.wav
+    - multikill.wav
+    - triplekill.wav
+    - ultrakill.wav
+  You can download them from <https://sounds.spriters-resource.com/pc_computer/unrealtournament/>.
 
 See [CONFIG.md](CONFIG.md) for full configuration details.
 

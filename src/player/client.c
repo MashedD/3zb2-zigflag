@@ -226,6 +226,37 @@ const int mod_to_frag[64] = {
 	FRAG_UNKNOWN,          // MOD_FLAG
 };
 
+static char *announcer_msgs[] = {
+	"!!! DOUBLE KILL !!!",
+	"!!! TRIPLE KILL !!!",
+	"!!! MULTI KILL !!!",
+	"!!! MEGA KILL !!!",
+	"!!! ULTRA KILL !!!",
+	"!!! MONSTER KILL !!!",
+};
+
+static char *announcer_snd[] = {
+	"announcer/doublekill.wav",
+	"announcer/triplekill.wav",
+	"announcer/multikill.wav",
+	"announcer/megakill.wav",
+	"announcer/ultrakill.wav",
+	"announcer/monsterkill.wav",
+};
+
+void Announcer_Message(edict_t *ent, int streak)
+{
+	if (ENT_IS_BOT(ent) || !announcer->value)
+		return;
+
+	int idx = streak - 2;
+	if (idx >= 0) {
+		if (idx > 5) idx = 5;
+		gi.centerprintf(ent, "%s", announcer_msgs[idx]);
+		gi.sound(ent, CHAN_VOICE, gi.soundindex(announcer_snd[idx]), 1, ATTN_NORM, 0);
+	}
+}
+
 void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
 {
 	int			mod = meansOfDeath & ~MOD_FRIENDLY_FIRE;
@@ -479,6 +510,16 @@ void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
 					else {
 						attacker->client->resp.score++;
 						attacker->client->resp.frags[mod_to_frag[mod & 63]].kills++;
+
+						float now = level.time;
+						if (now - attacker->client->resp.kill_streak_time < KILL_STREAK_TIMEOUT)
+							attacker->client->resp.kill_streak++;
+						else
+							attacker->client->resp.kill_streak = 1;
+						attacker->client->resp.kill_streak_time = now;
+
+						if (attacker->client->resp.kill_streak >= 2)
+							Announcer_Message(attacker, attacker->client->resp.kill_streak);
 					}
 					self->client->resp.frags[mod_to_frag[mod & 63]].deaths++;
 				}
@@ -623,6 +664,9 @@ player_die
 void player_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
 	int		n;
+
+	self->client->resp.kill_streak = 0;
+	self->client->resp.kill_streak_time = 0;
 
 	VectorClear (self->avelocity);
 

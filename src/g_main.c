@@ -57,6 +57,7 @@ cvar_t	*playerid;
 cvar_t	*combathud;
 cvar_t	*killerflag;
 cvar_t	*weaponswap;
+cvar_t	*announcer;
 
 //ponpoko
 cvar_t	*basepath;

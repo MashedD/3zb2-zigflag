@@ -91,6 +91,9 @@
 // Ratio of ZIGTICK * FRAMETIME to penalize in killerflag
 #define PENRATIO			0.75
 
+// Announcer kill streak timeout in seconds
+#define KILL_STREAK_TIMEOUT	4.0
+
 // memory tags to allow dynamic memory to be cleaned up
 #define	TAG_GAME	765		// clear when unloading the dll
 #define	TAG_LEVEL	766		// clear when loading a new level
@@ -638,6 +641,7 @@ extern	cvar_t  *respawn_protection;
 extern	cvar_t  *spawnbotfar;
 extern	cvar_t  *killerflag;
 extern	cvar_t  *weaponswap;
+extern	cvar_t  *announcer;
 
 extern	float	spawncycle;
 extern	int	flagbounce;
@@ -722,6 +726,11 @@ int PowerArmorType (edict_t *ent);
 gitem_t	*GetItemByIndex (int index);
 qboolean Add_Ammo (edict_t *ent, gitem_t *item, int count);
 void Touch_Item (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf);
+
+//
+// Announcer
+//
+void Announcer_Message(edict_t *ent, int streak);
 
 //
 // g_utils.c
@@ -1118,6 +1127,9 @@ typedef struct
 	int			damage_given;
 	int			damage_recvd;
 	int			last_hit_framenum[FRAG_TOTAL];
+
+	int			kill_streak;
+	float		kill_streak_time;
 } client_respawn_t;
 
 // this structure is cleared on each PutClientInServer(),

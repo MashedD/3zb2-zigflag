@@ -215,6 +215,7 @@ void InitGame (void)
 	combathud = gi.cvar("combathud", "1", CVAR_SERVERINFO | CVAR_NOSET);
 	killerflag = gi.cvar("killerflag", "1", CVAR_SERVERINFO | CVAR_ARCHIVE);
 	weaponswap = gi.cvar("weaponswap", "0", CVAR_SERVERINFO | CVAR_ARCHIVE);
+	announcer = gi.cvar("announcer", "0", CVAR_ARCHIVE);
 	playerid = gi.cvar("playerid", "0", CVAR_ARCHIVE);
 	spawnbotfar = gi.cvar("spawnbotfar", "0", CVAR_ARCHIVE);
 	zigspawn = gi.cvar("zigspawn", "1", CVAR_ARCHIVE);
