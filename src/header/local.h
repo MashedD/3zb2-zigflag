@@ -642,6 +642,7 @@ extern	cvar_t  *spawnbotfar;
 extern	cvar_t  *killerflag;
 extern	cvar_t  *weaponswap;
 extern	cvar_t  *announcer;
+extern	cvar_t  *g_sticky_grenades;
 
 extern	float	spawncycle;
 extern	int	flagbounce;

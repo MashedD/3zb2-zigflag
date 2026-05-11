@@ -48,6 +48,7 @@ The premise is simple: **get the flag and keep it**. Plays on standard Deathmatc
   You can download them from <https://sounds.spriters-resource.com/pc_computer/unrealtournament/>.
   I recommended playing deathmatch with `instagib` on map [q2deck](https://leray.proboards.com/post/30128)
   and playing [Foregone Destruction](https://www.youtube.com/watch?v=eEcPakW42JU) on YouTube.
+- `set g_sticky_grenades 1` option turns on sticky grenades
 
 See [CONFIG.md](CONFIG.md) for full configuration details.
 
