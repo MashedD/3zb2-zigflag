@@ -2598,7 +2598,7 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 		gi.Pmove (&pm);
 
 		// mid-air crouch support (optional, triggered by +movedown)
-		if (!pm.groundentity && pm.waterlevel == 0 && pm.s.pm_type == PM_NORMAL)
+		if (g_crouching->value && !pm.groundentity && pm.waterlevel == 0 && pm.s.pm_type == PM_NORMAL)
 		{
 			if (pm.cmd.upmove < 0)
 			{
