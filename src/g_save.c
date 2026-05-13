@@ -250,6 +250,11 @@ void InitGame (void)
 
 //ZOID
 	CTFInit();
+	if (!ctf->value && zigmode->value) {
+		gi.dprintf("zigmode requires CTF; disabling.\n");
+		gi.cvar_set("zigmode", "0");
+		zigmode->value = 0;
+	}
 //ZOID
 	Load_BotInfo();		//コンフィグ読み込み3ZBConfig.cfg
 }

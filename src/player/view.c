@@ -1159,7 +1159,7 @@ void ClientEndServerFrame (edict_t *ent)
 	{
 		if (ent->client->menu)
 			PMenu_Update(ent);
-		else if (zigmode->value)
+		else if (ctf->value && zigmode->value)
 			DeathmatchScoreboardMessage (ent, ent->flagholder);
 		else
 			DeathmatchScoreboardMessage (ent, ent->enemy);

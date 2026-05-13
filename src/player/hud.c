@@ -53,7 +53,7 @@ void MoveClientToIntermission (edict_t *ent)
 
 	if (deathmatch->value && !(ent->svflags & SVF_MONSTER))
 	{
-		if(zigmode->value)
+		if(ctf->value && zigmode->value)
 			DeathmatchScoreboardMessage (ent, ent->flagholder);
 		else
 			DeathmatchScoreboardMessage (ent, NULL);
@@ -204,7 +204,7 @@ void DeathmatchScoreboardMessage (edict_t *ent, edict_t *killer)
 
 	if(level.intermissiontime && !level.broadcast && ent == &g_edicts[1])
 	{
-		if(zigmode->value && zigspawn->value && flagbounce > 0)
+		if(ctf->value && zigmode->value && zigspawn->value && flagbounce > 0)
 		{
 			CPRepeat('-', strlen(level.mapname) + 11);
 			gi.bprintf(PRINT_HIGH, "| %s | ~ %02d |\n", level.mapname, flagbounce);
@@ -247,7 +247,7 @@ void DeathmatchScoreboardMessage (edict_t *ent, edict_t *killer)
 		if (cl_ent == ent)
 			tag = "tag1";
 		else if (cl_ent == killer)
-			if (zigmode->value)
+			if (ctf->value && zigmode->value)
 				tag = "zigtag";
 			else
 				tag = "tag2";
@@ -257,7 +257,7 @@ void DeathmatchScoreboardMessage (edict_t *ent, edict_t *killer)
 		if (zigintro->value && !ENT_IS_BOT(cl_ent) && !cl_ent->client->pers.joined)
 			tag = "spectag";
 
-		if(zigmode->value)
+		if(ctf->value && zigmode->value)
 			if(killer != NULL && cl_ent == killer)
 				tag = "zigtag";
 
@@ -319,7 +319,7 @@ Note that it isn't that hard to overflow the 1400 byte message limit!
 */
 void DeathmatchScoreboard (edict_t *ent)
 {
-	if(zigmode->value)
+	if(ctf->value && zigmode->value)
 		DeathmatchScoreboardMessage (ent, ent->flagholder);
 	else
 		DeathmatchScoreboardMessage (ent, ent->enemy);
@@ -793,7 +793,7 @@ void G_SetStats (edict_t *ent)
 	//
 	if(combathud->value && (level.framenum&8) && !level.intermissiontime)
 	{
-        if (zigmode->value)
+        if (ctf->value && zigmode->value)
 		    ent->client->ps.stats[STAT_RANK] = ent->client->pers.rank;
 
 		if(timelimit->value > 0) {
@@ -815,7 +815,7 @@ void G_SetStats (edict_t *ent)
 //ponpoko
 
 	// zigmode now hijacks this - can't find an instance of zsight being used...
-	if(zigmode->value != 1) {
+	if(!ctf->value || zigmode->value != 1) {
 		if(ent->client->zc.aiming == 1)
 		{
 			ent->client->ps.stats[STAT_SIGHT_PIC] = gi.imageindex ("zsight");

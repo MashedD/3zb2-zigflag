@@ -3086,11 +3086,6 @@ void CTFSetupNavSpawn()
 
 		if(!ctf->value) {
 			gi.dprintf("Chaining: file %s/chdtm/%s.chn not found.\n",gamepath->string,level.mapname);
-			if(zigmode->value)
-			{
-				gi.dprintf("\nChaining file required for zigmode.\n\n");
-				gi.error (ERR_FATAL);
-			}
 		}
 		else gi.dprintf("Chaining: file %s/chctf/%s.chf not found.\n",gamepath->string,level.mapname);
 

@@ -1076,9 +1076,14 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 	if(!chedit->value) G_FindItemLink();	//アイテムのリンク(通常時のみ)
 
 	CSObserve();
+	if (!ctf->value && zigmode->value) {
+		gi.dprintf("zigmode requires CTF; disabling.\n");
+		gi.cvar_set("zigmode", "0");
+		zigmode->value = 0;
+	}
 	G_SpawnRouteLink();
 
-	if(zigmode->value == 1) zigflag_spawn = 1;
+	if(ctf->value && zigmode->value == 1) zigflag_spawn = 1;
 	else zigflag_spawn = 0;
 
 	zflag_item =  FindItem("Zig Flag");

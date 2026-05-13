@@ -468,7 +468,7 @@ void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
 			}
 			if (message)
 			{
-				if(zigmode->value && zigkiller->value)
+				if(ctf->value && zigmode->value && zigkiller->value)
 				{
 					if(attacker->flagholder && attacker->flagholder == self)
 					{
@@ -2059,7 +2059,7 @@ void ClientDisconnect (edict_t *ent)
 	CTFDeadDropTech(ent);
 //ZOID
 
-	if(zigmode->value) ZIGDeadDropFlag(ent);
+	if(ctf->value && zigmode->value) ZIGDeadDropFlag(ent);
 
 	// send effect
 	gi.WriteByte (svc_muzzleflash);
@@ -2540,7 +2540,7 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 	client = ent->client;
 	float delay = 5.0;
 
-	if(zigmode->value) delay = 7.5;
+	if(ctf->value && zigmode->value) delay = 7.5;
 
 	if (level.intermissiontime)
 	{
