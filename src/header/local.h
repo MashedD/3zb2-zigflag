@@ -708,6 +708,7 @@ void Cmd_Score_f (edict_t *ent);
 
 void Cmd_Store_f (edict_t *ent);
 void Cmd_Recall_f (edict_t *ent);
+void Cmd_Menu_f (edict_t *ent);
 
 //
 // g_items.c

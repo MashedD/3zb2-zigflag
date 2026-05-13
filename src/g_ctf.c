@@ -2683,6 +2683,10 @@ void CTFJoinTeam(edict_t *ent, int desired_team)
 	PMenu_Close(ent);
 
 	ent->svflags &= ~SVF_NOCLIENT;
+	if (zigintro->value && !ent->client->pers.joined) {
+		ent->client->pers.joined = true;
+		ent->client->pers.spectator = false;
+	}
 	ent->client->resp.ctf_team = desired_team;
 	ent->client->resp.ctf_state = CTF_STATE_START;
 	s = Info_ValueForKey (ent->client->pers.userinfo, "skin");
@@ -2716,6 +2720,19 @@ void CTFChaseCam(edict_t *ent, pmenu_t *p)
 {
 	int i;
 	edict_t *e;
+	char *s;
+
+	if (ent->client->resp.ctf_team != CTF_NOTEAM) {
+		PMenu_Close(ent);
+		ent->client->chase_target = NULL;
+		ent->client->pers.spectator = true;
+		ent->client->resp.ctf_team = CTF_NOTEAM;
+		ent->client->resp.ctf_state = CTF_STATE_START;
+		s = Info_ValueForKey (ent->client->pers.userinfo, "skin");
+		CTFAssignSkin(ent, s);
+		spectator_respawn(ent);
+		return;
+	}
 
 	if (ent->client->chase_target) {
 		ent->client->chase_target = NULL;
@@ -2723,11 +2740,12 @@ void CTFChaseCam(edict_t *ent, pmenu_t *p)
 		return;
 	}
 
+	PMenu_Close(ent);
+
 	for (i = 1; i <= maxclients->value; i++) {
 		e = g_edicts + i;
 		if (e->inuse && e->solid != SOLID_NOT) {
 			ent->client->chase_target = e;
-			PMenu_Close(ent);
 			ent->client->update_chase = true;
 			break;
 		}
@@ -2817,7 +2835,9 @@ int CTFUpdateJoinMenu(edict_t *ent)
 		}
 	}
 
-	if (ent->client->chase_target)
+	if (ent->client->resp.ctf_team != CTF_NOTEAM)
+		joinmenu[8].text = "Observer";
+	else if (ent->client->chase_target)
 		joinmenu[8].text = "Leave Chase Camera";
 	else
 		joinmenu[8].text = "Chase Camera";

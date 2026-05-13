@@ -2706,7 +2706,11 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 	// fire weapon from final position if needed
 	if (client->latched_buttons & BUTTON_ATTACK)
 	{
-		if (client->resp.spectator) {
+		if (client->menu) {
+
+			client->latched_buttons = 0;
+
+		} else if (client->resp.spectator) {
 
 			client->latched_buttons = 0;
 
@@ -2715,6 +2719,10 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 				client->ps.pmove.pm_flags &= ~PMF_NO_PREDICTION;
 			} else
 				GetChaseTarget(ent);
+
+		} else if (ent->movetype == MOVETYPE_NOCLIP) {
+
+			client->latched_buttons = 0;
 
 		} else if (!client->weapon_thunk) {
 			client->weapon_thunk = true;
@@ -2782,6 +2790,7 @@ void ClientBeginServerFrame (edict_t *ent)
 //ZOID
 		&& ent->movetype != MOVETYPE_NOCLIP
 //ZOID
+		&& !client->menu
 		)
 		Think_Weapon (ent);
 	else

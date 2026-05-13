@@ -617,18 +617,18 @@ void Cmd_InvUse_f (edict_t *ent)
 {
 	gitem_t		*it;
 
-	if (ent->client->resp.spectator && !ent->client->pers.joined) {
-		ent->client->pers.joined = true;
-		spectator_respawn(ent);
-		return;
-	}
-
 //ZOID
 	if (ent->client->menu) {
 		PMenu_Select(ent);
 		return;
 	}
 //ZOID
+
+	if (ent->client->resp.spectator && !ent->client->pers.joined) {
+		ent->client->pers.joined = true;
+		spectator_respawn(ent);
+		return;
+	}
 
 	ValidateSelectedItem (ent);
 
@@ -822,14 +822,54 @@ Cmd_PutAway_f
 */
 void Cmd_PutAway_f (edict_t *ent)
 {
-	ent->client->showscores = false;
-	ent->client->showhelp = false;
-	ent->client->showinventory = false;
+	if (ent->client->showscores)
+	{
+		ent->client->showscores = false;
+		ent->client->update_chase = true;
+	}
+
+	if (ent->client->showhelp)
+	{
+		ent->client->showhelp = false;
+		ent->client->update_chase = true;
+	}
+
+	if (ent->client->showinventory)
+	{
+		ent->client->showinventory = false;
+		ent->client->update_chase = true;
+	}
+
 //ZOID
 	if (ent->client->menu)
-		PMenu_Close(ent);
-	ent->client->update_chase = true;
+	{
+		PMenu_Close (ent);
+		ent->client->update_chase = true;
+	}
 //ZOID
+}
+
+void Cmd_Menu_f (edict_t *ent)
+{
+	if (ent->svflags & SVF_MONSTER)
+		return;
+
+	if (ent->client->menu) {
+		PMenu_Close(ent);
+		ent->client->update_chase = true;
+	}
+
+	if (zigintro->value && !ent->client->pers.joined) {
+		gi.centerprintf(ent, ClientMessage);
+		return;
+	}
+
+	if (ctf->value) {
+		CTFOpenJoinMenu(ent);
+		return;
+	}
+
+	gi.cprintf(ent, PRINT_HIGH, "No menu available.\n");
 }
 
 
@@ -1443,6 +1483,8 @@ void ClientCommand (edict_t *ent)
 		Cmd_Kill_f (ent);
 	else if (Q_stricmp (cmd, "putaway") == 0)
 		Cmd_PutAway_f (ent);
+	else if (Q_stricmp (cmd, "menu") == 0)
+		Cmd_Menu_f (ent);
 	else if (Q_stricmp (cmd, "wave") == 0)
 		Cmd_Wave_f (ent);
 	else if (Q_stricmp (cmd, "zoomin") == 0)		//zoom
