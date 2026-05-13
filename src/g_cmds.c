@@ -519,6 +519,13 @@ void Cmd_Drop_f (edict_t *ent)
 		gi.cprintf (ent, PRINT_HIGH, "unknown item: %s\n", s);
 		return;
 	}
+
+	if (instagib && instagib->value && !Q_stricmp(it->pickup_name, "Slugs"))
+	{
+		gi.cprintf(ent, PRINT_HIGH, "Can't drop slugs in instagib mode\n");
+		return;
+	}
+
 	if (!it->drop)
 	{
 		gi.cprintf (ent, PRINT_HIGH, "Item is not dropable.\n");
