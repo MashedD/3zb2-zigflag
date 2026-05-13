@@ -50,6 +50,7 @@ The premise is simple: **get the flag and keep it**. Plays on standard Deathmatc
   and playing [Foregone Destruction](https://www.youtube.com/watch?v=eEcPakW42JU) on YouTube.
 - `set g_sticky_grenades 1` option turns on sticky grenades
 - `set g_crouching 1` to enable Remastered-like crouching in air
+- Added `menu` command
 
 See [CONFIG.md](CONFIG.md) for full configuration details.
 

@@ -50,6 +50,7 @@ void PMenu_Close(edict_t *ent)
 	free(ent->client->menu);
 	ent->client->menu = NULL;
 	ent->client->showscores = false;
+	ent->client->inmenu = false;
 }
 
 void PMenu_Update(edict_t *ent)
