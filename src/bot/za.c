@@ -2754,9 +2754,9 @@ DCHCANC://しゃがみっぱなし
 			{
 				gitem_t *tdm_weps[] = {
 					Fdi_SHOTGUN, Fdi_SUPERSHOTGUN, Fdi_MACHINEGUN, Fdi_CHAINGUN,
-					Fdi_GRENADES, Fdi_GRENADELAUNCHER, Fdi_ROCKETLAUNCHER,
+					Fdi_GRENADELAUNCHER, Fdi_ROCKETLAUNCHER,
 					Fdi_HYPERBLASTER, Fdi_RAILGUN, Fdi_BFG, Fdi_PHALANX,
-					Fdi_BOOMER, Fdi_TRAP
+					Fdi_BOOMER
 				};
 				for (tdm_k = 0; tdm_k < (int)(sizeof(tdm_weps)/sizeof(tdm_weps[0])); tdm_k++)
 				{
