@@ -2725,6 +2725,67 @@ DCHCANC://しゃがみっぱなし
 //	else
 	Set_Combatstate(ent,foundedenemy);
 	if(trace_priority == TRP_ALLKEEP) goto VCHCANSEL;
+
+	// TDM weapon sharing - drop extra weapons for nearby teammates
+	if (tdm->value || ctf->value)
+	{
+		int tdm_j, tdm_k, tdm_idx, tdm_dropped;
+		edict_t *tdm_team;
+
+		for (tdm_j = 1; tdm_j <= maxclients->value; tdm_j++)
+		{
+			tdm_team = &g_edicts[tdm_j];
+			if (!tdm_team->inuse || ent == tdm_team || tdm_team->deadflag) continue;
+			if (!tdm_team->client) continue;
+			if (tdm_team->svflags & SVF_MONSTER) continue;
+			if (tdm_team->movetype == MOVETYPE_NOCLIP) continue;
+			if (!OnSameTeam(ent, tdm_team))
+			{
+				if (ent->client->resp.ctf_team >= CTF_TEAM1
+					&& tdm_team->client->resp.ctf_team >= CTF_TEAM1
+					&& ent->client->resp.ctf_team != tdm_team->client->resp.ctf_team)
+					continue;
+			}
+
+			VectorSubtract(tdm_team->s.origin, ent->s.origin, v);
+			if (VectorLength(v) > 400) continue;
+			tdm_dropped = false;
+
+			{
+				gitem_t *tdm_weps[] = {
+					Fdi_SHOTGUN, Fdi_SUPERSHOTGUN, Fdi_MACHINEGUN, Fdi_CHAINGUN,
+					Fdi_GRENADES, Fdi_GRENADELAUNCHER, Fdi_ROCKETLAUNCHER,
+					Fdi_HYPERBLASTER, Fdi_RAILGUN, Fdi_BFG, Fdi_PHALANX,
+					Fdi_BOOMER, Fdi_TRAP
+				};
+				for (tdm_k = 0; tdm_k < (int)(sizeof(tdm_weps)/sizeof(tdm_weps[0])); tdm_k++)
+				{
+					if (!tdm_weps[tdm_k]) continue;
+					tdm_idx = ITEM_INDEX(tdm_weps[tdm_k]);
+					if (ent->client->pers.inventory[tdm_idx] && !tdm_team->client->pers.inventory[tdm_idx])
+					{
+						Drop_Item(ent, tdm_weps[tdm_k]);
+						ent->client->pers.inventory[tdm_idx]--;
+						tdm_dropped = true;
+
+						// drop matching ammo
+						if (tdm_weps[tdm_k]->ammo && tdm_weps[tdm_k]->ammo[0])
+						{
+							gitem_t *ammo = FindItem(tdm_weps[tdm_k]->ammo);
+							if (ammo && ammo != tdm_weps[tdm_k] && ammo->drop)
+							{
+								int ammo_idx = ITEM_INDEX(ammo);
+								if (ent->client->pers.inventory[ammo_idx] >= ammo->quantity)
+									ammo->drop(ent, ammo);
+							}
+						}
+					}
+				}
+			}
+			if (tdm_dropped) break;
+		}
+	}
+
 	//--------------------------------------------------------------------------------------
 	//brause target status
 	if(zc->second_target != NULL && zc->route_trace) 

@@ -51,6 +51,7 @@ The premise is simple: **get the flag and keep it**. Plays on standard Deathmatc
 - `set g_sticky_grenades 1` option turns on sticky grenades
 - `set g_crouching 1` to enable Remastered-like crouching in air
 - Added `menu` command
+- Bots can now drop weapons + ammo for player in TDM/CTF
 
 See [CONFIG.md](CONFIG.md) for full configuration details.
 
