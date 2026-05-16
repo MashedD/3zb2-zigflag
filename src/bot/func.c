@@ -2,26 +2,24 @@
 #include "../header/player.h"
 
 
-qboolean Get_YenPos(char *Buff,int *curr)
+qboolean Get_YenPos (char *Buff, int *curr)
 {
 	int i;
 
 	i = *curr + 1;
 
-	while(1)
-	{
-//		if(i >= strlen(Buff)) return false;
-		if(Buff[i] == 0 || Buff[i] == 10 || Buff[i] == 13)
-		{
+	while (1) {
+		//		if(i >= strlen(Buff)) return false;
+		if (Buff[i] == 0 || Buff[i] == 10 || Buff[i] == 13) {
 			*curr = i;
 			return true;
 		}
-		if(Buff[i] == '\\')
-		{
+		if (Buff[i] == '\\') {
 			*curr = i;
 			return true;
 		}
-		if(Buff[i] == '\t') Buff[i] = 0;
+		if (Buff[i] == '\t')
+			Buff[i] = 0;
 		i++;
 	}
 }
@@ -31,39 +29,42 @@ qboolean Get_YenPos(char *Buff,int *curr)
 // Load bot's infomation from 3ZBConfig.cfg
 //
 //----------------------------------------------------------------
-void Load_BotInfo()
+void Load_BotInfo ()
 {
-	char	MessageSection[50];
-	char	MessageHighlight[MAX_STRING_CHARS];
-	char	Buff[1024];
-	int		i,j,k,l;
+	char MessageSection[50];
+	char MessageHighlight[MAX_STRING_CHARS];
+	char Buff[1024];
+	int i, j, k, l;
 
-	FILE	*fp;
+	FILE *fp;
 
 	SpawnWaitingBots = 0;
 	ListedBotCount = 0;
 
 	//init message
-	memset(ClientMessage,0,sizeof(ClientMessage));
+	memset(ClientMessage, 0, sizeof(ClientMessage));
 	//set message section
-	if(!ctf->value && chedit->value) strcpy(MessageSection,MESS_CHAIN_DM);
-	else if(ctf->value && !chedit->value) strcpy(MessageSection,MESS_CTF);
-	else if(ctf->value && chedit->value) strcpy(MessageSection,MESS_CHAIN_CTF);
-	else strcpy(MessageSection,MESS_DEATHMATCH);
+	if (!ctf->value && chedit->value)
+		strcpy(MessageSection, MESS_CHAIN_DM);
+	else if (ctf->value && !chedit->value)
+		strcpy(MessageSection, MESS_CTF);
+	else if (ctf->value && chedit->value)
+		strcpy(MessageSection, MESS_CHAIN_CTF);
+	else
+		strcpy(MessageSection, MESS_DEATHMATCH);
 
 	//init botlist
 	ListedBots = 0;
 	j = 1;
-	for(i = 0;i < MAXBOTS;i++)
-	{
+	for (i = 0; i < MAXBOTS; i++) {
 		//netname
-		sprintf(Buff,"Zigock[%i]",i);
-		strcpy(Bot[i].netname,Buff);
+		sprintf(Buff, "Zigock[%i]", i);
+		strcpy(Bot[i].netname, Buff);
 		//model
-		strcpy(Bot[i].model,"male");
+		strcpy(Bot[i].model, "male");
 		//skin
-		strcpy(Bot[i].model,"grunt");
-	
+		strcpy(Bot[i].model, "grunt");
+
 		//param
 		Bot[i].param[BOP_WALK] = 0;
 		Bot[i].param[BOP_AIM] = 5;
@@ -78,140 +79,143 @@ void Load_BotInfo()
 		Bot[i].spflg = 0;
 		//team
 		Bot[i].team = j;
-		if(++j > 2) j = 1;
+		if (++j > 2)
+			j = 1;
 	}
 
 	//botlist value
-	botlist = gi.cvar ("botlist", "default", CVAR_SERVERINFO | CVAR_LATCH);
-	gamepath = gi.cvar ("game", "0", CVAR_LATCH);
+	botlist = gi.cvar("botlist", "default", CVAR_SERVERINFO | CVAR_LATCH);
+	gamepath = gi.cvar("game", "0", CVAR_LATCH);
 
 	//load info
 	//sprintf(Buff,"%s/3ZBConfig.cfg",gamepath->string);
-	sprintf(Buff,"%s/%s/3zbconfig.cfg",GET_BASEPATH_STR(),gamepath->string);
-	fp = fopen(Buff,"rt");
-	if(fp == NULL)
-	{
+	sprintf(Buff, "%s/%s/3zbconfig.cfg", GET_BASEPATH_STR(), gamepath->string);
+	fp = fopen(Buff, "rt");
+	if (fp == NULL) {
 		gi.dprintf("3ZB CFG: file not found: %s\n", Buff);
 		gi.dprintf("\nUse: +set basepath\n\n");
-		gi.error (ERR_FATAL);
-	}
-	else
-	{
-		fseek( fp, 0, SEEK_SET);	//先頭へ移動
-		while(1)
-		{
-			if(fgets( Buff, sizeof(Buff), fp ) == NULL) goto MESS_NOTFOUND;
-			if(!strncasecmp(MessageSection,Buff,strlen(MessageSection))) break;
+		gi.error(ERR_FATAL);
+	} else {
+		fseek(fp, 0, SEEK_SET); //先頭へ移動
+		while (1) {
+			if (fgets(Buff, sizeof(Buff), fp) == NULL)
+				goto MESS_NOTFOUND;
+			if (!strncasecmp(MessageSection, Buff, strlen(MessageSection)))
+				break;
 		}
 
-		while(1)
-		{
-			if(fgets( Buff, sizeof(Buff), fp ) == NULL) goto MESS_NOTFOUND;
-			if(Buff[0] == '.' || Buff[0] == '[' || Buff[0] == '#') break;
+		while (1) {
+			if (fgets(Buff, sizeof(Buff), fp) == NULL)
+				goto MESS_NOTFOUND;
+			if (Buff[0] == '.' || Buff[0] == '[' || Buff[0] == '#')
+				break;
 			k = strlen(Buff);
-			if((strlen(Buff) + strlen(ClientMessage)) > MAX_STRING_CHARS - 1) break;
+			if ((strlen(Buff) + strlen(ClientMessage)) > MAX_STRING_CHARS - 1)
+				break;
 			HighlightStr(MessageHighlight, Buff, MAX_STRING_CHARS);
 			strcat(ClientMessage, MessageHighlight);
 		}
-MESS_NOTFOUND:
+	MESS_NOTFOUND:
 		//if(botlist->string == NULL) strcpy(MessageSection,BOTLIST_SECTION_DM);
-		//else 
-		sprintf(MessageSection,"[%s]",botlist->string);
-		fseek( fp, 0, SEEK_SET);	//先頭へ移動
-		while(1)
-		{
-			if(fgets( Buff, sizeof(Buff), fp ) == NULL)
-			{
+		//else
+		sprintf(MessageSection, "[%s]", botlist->string);
+		fseek(fp, 0, SEEK_SET); //先頭へ移動
+		while (1) {
+			if (fgets(Buff, sizeof(Buff), fp) == NULL) {
 				MessageSection[0] = 0;
 				break;
 			}
-			if(!strncasecmp(MessageSection,Buff,strlen(MessageSection))) break;
+			if (!strncasecmp(MessageSection, Buff, strlen(MessageSection)))
+				break;
 		}
 		//when not found
-		if(MessageSection[0] == 0)
-		{
-			strcpy(MessageSection,BOTLIST_SECTION_DM);
-			fseek( fp, 0, SEEK_SET);	//先頭へ移動
-			while(1)
-			{
-				if(fgets( Buff, sizeof(Buff), fp ) == NULL) goto BOTLIST_NOTFOUND;
-				if(!strncasecmp(MessageSection,Buff,strlen(MessageSection))) break;
+		if (MessageSection[0] == 0) {
+			strcpy(MessageSection, BOTLIST_SECTION_DM);
+			fseek(fp, 0, SEEK_SET); //先頭へ移動
+			while (1) {
+				if (fgets(Buff, sizeof(Buff), fp) == NULL)
+					goto BOTLIST_NOTFOUND;
+				if (!strncasecmp(MessageSection, Buff, strlen(MessageSection)))
+					break;
 			}
 		}
 
 		i = 0;
-		for(i = 0;i < MAXBOTS;i++)
-		{
-			if(fgets( Buff, sizeof(Buff), fp ) == NULL) break;
-			if(Buff[0] == '[') break;
-			if(Buff[0] == '\n' || Buff[0] == '#') {i--;continue;}
-			j = 2,k = 1;
-			if(strncmp(Buff,"\\\\",2))
-			{
+		for (i = 0; i < MAXBOTS; i++) {
+			if (fgets(Buff, sizeof(Buff), fp) == NULL)
+				break;
+			if (Buff[0] == '[')
+				break;
+			if (Buff[0] == '\n' || Buff[0] == '#') {
 				i--;
+				continue;
 			}
-			else
-			{
+			j = 2, k = 1;
+			if (strncmp(Buff, "\\\\", 2)) {
+				i--;
+			} else {
 				//netname
-				if(Get_YenPos(Buff,&k))
-				{
+				if (Get_YenPos(Buff, &k)) {
 					Buff[k] = 0;
-					if(strlen(&Buff[j]) < 21) strcpy(Bot[i].netname,&Buff[j]);
+					if (strlen(&Buff[j]) < 21)
+						strcpy(Bot[i].netname, &Buff[j]);
 					j = k + 1;
-				}
-				else break;
+				} else
+					break;
 				//model name
-				if(Get_YenPos(Buff,&k))
-				{
+				if (Get_YenPos(Buff, &k)) {
 					Buff[k] = 0;
-					if(strlen(&Buff[j]) < 21) strcpy(Bot[i].model,&Buff[j]);
+					if (strlen(&Buff[j]) < 21)
+						strcpy(Bot[i].model, &Buff[j]);
 					j = k + 1;
 					k++;
-				}
-				else break;
+				} else
+					break;
 				//skin name
-				if(Get_YenPos(Buff,&k))
-				{
+				if (Get_YenPos(Buff, &k)) {
 					Buff[k] = 0;
-					if(strlen(&Buff[j]) < 21) strcpy(Bot[i].skin,&Buff[j]);
+					if (strlen(&Buff[j]) < 21)
+						strcpy(Bot[i].skin, &Buff[j]);
 					j = k + 1;
 					k++;
-				}
-				else break;
-				for(l = 0;l < MAXBOP;l++)
-				{
+				} else
+					break;
+				for (l = 0; l < MAXBOP; l++) {
 					//param0-7
-					if(Get_YenPos(Buff,&k))
-					{
+					if (Get_YenPos(Buff, &k)) {
 						Buff[k] = 0;
 						Bot[i].param[l] = (unsigned char)atoi(&Buff[j]);
 						j = k + 1;
 						k++;
-					}
-					else break;
+					} else
+						break;
 				}
-				if(l < MAXBOP) break;
+				if (l < MAXBOP)
+					break;
 				//team
-				if(Get_YenPos(Buff,&k))
-				{
+				if (Get_YenPos(Buff, &k)) {
 					Buff[k] = 0;
-					if(Buff[j] == 'R') Bot[i].team = 1;
-					else if(Buff[j] == 'B') Bot[i].team = 2;
-					else Bot[i].team = 1;
+					if (Buff[j] == 'R')
+						Bot[i].team = 1;
+					else if (Buff[j] == 'B')
+						Bot[i].team = 2;
+					else
+						Bot[i].team = 1;
 					j = k + 1;
 					k++;
-				}
-				else break;
+				} else
+					break;
 				//auto spawn
-				if(Get_YenPos(Buff,&k))
-				{
+				if (Get_YenPos(Buff, &k)) {
 					Buff[k] = 0;
 					Bot[i].spflg = atoi(&Buff[j]);
-//gi.dprintf("%i %s\n",Bot[i].spflg,&Buff[j]);
-					if(Bot[i].spflg == BOT_SPRESERVED && autospawn->value && !chedit->value) SpawnWaitingBots++; 
-					else Bot[i].spflg = BOT_SPAWNNOT;
-				}
-				else break;
+					//gi.dprintf("%i %s\n",Bot[i].spflg,&Buff[j]);
+					if (Bot[i].spflg == BOT_SPRESERVED && autospawn->value && !chedit->value)
+						SpawnWaitingBots++;
+					else
+						Bot[i].spflg = BOT_SPAWNNOT;
+				} else
+					break;
 				ListedBots++;
 			}
 		}
@@ -219,7 +223,7 @@ MESS_NOTFOUND:
 BOTLIST_NOTFOUND:
 	fclose(fp);
 
-	gi.dprintf("%i of Bots is listed.\n",ListedBots);	
+	gi.dprintf("%i of Bots is listed.\n", ListedBots);
 	spawncycle = level.time + FRAMETIME * 20;
 }
 
@@ -232,14 +236,14 @@ BOTLIST_NOTFOUND:
 
 int Get_NumOfPlayer (void) //Botも含めたplayerの数
 {
-	int i,j;
+	int i, j;
 	edict_t *ent;
 
 	j = 0;
-	for (i=0 ; i<maxclients->value ; i++)
-	{
+	for (i = 0; i < maxclients->value; i++) {
 		ent = g_edicts + 1 + i;
-		if (ent->inuse)	j++;
+		if (ent->inuse)
+			j++;
 	}
 	return j;
 }
@@ -253,19 +257,18 @@ int Get_NumOfPlayer (void) //Botも含めたplayerの数
 
 edict_t *Get_NewClient (void)
 {
-	int			i;
-	edict_t		*e;
-	gclient_t	*client;
+	int i;
+	edict_t *e;
+	gclient_t *client;
 
 	i = (int)maxclients->value;
 	e = &g_edicts[i];
-	for ( ; i >= 1 ; i--, e--) {
+	for (; i >= 1; i--, e--) {
 		client = &game.clients[i - 1];
 		// the first couple seconds of server time can involve a lot of
 		// freeing and allocating, so relax the replacement policy
-		if (!e->inuse && !client->pers.connected && ( e->freetime < 2 || level.time - e->freetime > 0.5 ) )
-		{
-			G_InitEdict (e);
+		if (!e->inuse && !client->pers.connected && (e->freetime < 2 || level.time - e->freetime > 0.5)) {
+			G_InitEdict(e);
 			return e;
 		}
 	}
@@ -288,61 +291,58 @@ void Bot_Think (edict_t *self)
 	int self_idx = self - g_edicts;
 
 	if (self_idx < 1 || self_idx > (int)maxclients->value) {
-		self->think     = NULL;
+		self->think = NULL;
 		self->nextthink = 0;
 		return;
 	}
 
 	if (!self->client) {
-		self->think     = NULL;
+		self->think = NULL;
 		self->nextthink = 0;
 		return;
 	}
 
-	if (self->linkcount != self->monsterinfo.linkcount)
-	{
-//		self->monsterinfo.linkcount = self->linkcount;
-		M_CheckGround (self);
+	if (self->linkcount != self->monsterinfo.linkcount) {
+		//		self->monsterinfo.linkcount = self->linkcount;
+		M_CheckGround(self);
 	}
 
-	if(self->deadflag)
-	{
-		if(self->client->ctf_grapple) CTFPlayerResetGrapple(self);
+	if (self->deadflag) {
+		if (self->client->ctf_grapple)
+			CTFPlayerResetGrapple(self);
 
-		if(self->s.modelindex == skullindex || self->s.modelindex == headindex) self->s.frame = 0;
-		else if(self->s.frame < FRAME_crdeath1 && self->s.frame != 0) self->s.frame = FRAME_death308;
-		self->s.modelindex2 = 0;	// remove linked weapon model
-//ZOID
-		self->s.modelindex3 = 0;	// remove linked ctf flag
-//ZOID
+		if (self->s.modelindex == skullindex || self->s.modelindex == headindex)
+			self->s.frame = 0;
+		else if (self->s.frame < FRAME_crdeath1 && self->s.frame != 0)
+			self->s.frame = FRAME_death308;
+		self->s.modelindex2 = 0; // remove linked weapon model
+					 //ZOID
+		self->s.modelindex3 = 0; // remove linked ctf flag
+					 //ZOID
 
 		self->client->zc.route_trace = false;
-		if(self->client->respawn_time <= level.time)
-		{
-			if(self->svflags & SVF_MONSTER)
-			{
+		if (self->client->respawn_time <= level.time) {
+			if (self->svflags & SVF_MONSTER) {
 				self->client->respawn_time = level.time;
-				CopyToBodyQue (self);
+				CopyToBodyQue(self);
 				PutBotInServer(self);
-			}		
+			}
 		}
-	}
-	else
-	{
-		Bots_Move_NORM (self);
-		if(!self->inuse) return;			//removed botself
+	} else {
+		Bots_Move_NORM(self);
+		if (!self->inuse)
+			return; //removed botself
 
-		ClientBeginServerFrame (self);
+		ClientBeginServerFrame(self);
 	}
-	if (self->linkcount != self->monsterinfo.linkcount)
-	{
-//		self->monsterinfo.linkcount = self->linkcount;
-		M_CheckGround (self);
+	if (self->linkcount != self->monsterinfo.linkcount) {
+		//		self->monsterinfo.linkcount = self->linkcount;
+		M_CheckGround(self);
 	}
-	M_CatagorizePosition (self);
-	BotEndServerFrame (self);
+	M_CatagorizePosition(self);
+	BotEndServerFrame(self);
 	self->nextthink = level.time + FRAMETIME;
-	return;	
+	return;
 }
 
 //----------------------------------------------------------------
@@ -352,64 +352,64 @@ void Bot_Think (edict_t *self)
 //
 //----------------------------------------------------------------
 
-void InitializeBot (edict_t *ent,int botindex )
+void InitializeBot (edict_t *ent, int botindex)
 {
-	gclient_t	*client;
-	char		pinfo[200];
-	int			index;
+	gclient_t *client;
+	char pinfo[200];
+	int index;
 
-	index = ent-g_edicts-1;
+	index = ent - g_edicts - 1;
 	ent->client = &game.clients[index];
 
 	client = ent->client;
 
-	memset (&client->zc,0,sizeof(zgcl_t));
-	memset (&client->pers, 0, sizeof(client->pers));
-	memset (&client->resp, 0, sizeof(client->resp));
+	memset(&client->zc, 0, sizeof(zgcl_t));
+	memset(&client->pers, 0, sizeof(client->pers));
+	memset(&client->resp, 0, sizeof(client->resp));
 
 	//set botindex NO.
-	client->zc.botindex = botindex;	
+	client->zc.botindex = botindex;
 
 	client->resp.enterframe = level.framenum;
 
 	//set netname model skil and CTF team
-	sprintf(pinfo,"\\rate\\25000\\msg\\1\\fov\\90\\skin\\%s/%s\\name\\%s\\hand\\0",Bot[botindex].model,Bot[botindex].skin,Bot[botindex].netname);
+	sprintf(pinfo, "\\rate\\25000\\msg\\1\\fov\\90\\skin\\%s/%s\\name\\%s\\hand\\0", Bot[botindex].model, Bot[botindex].skin, Bot[botindex].netname);
 	ent->client->resp.ctf_team = Bot[botindex].team; //CTF_TEAM1,CTF_TEAM2
 	ent->svflags = SVF_MONSTER;
 
-	ClientUserinfoChanged (ent, pinfo);
+	ClientUserinfoChanged(ent, pinfo);
 
-	client->pers.health			= 100;
-	client->pers.max_health		= 100;
+	client->pers.health = 100;
+	client->pers.max_health = 100;
 
-	client->pers.max_bullets	= 200;
-	client->pers.max_shells		= 100;
-	client->pers.max_rockets	= 50;
-	client->pers.max_grenades	= 50;
-	client->pers.max_cells		= 200;
-	client->pers.max_slugs		= 50;
+	client->pers.max_bullets = 200;
+	client->pers.max_shells = 100;
+	client->pers.max_rockets = 50;
+	client->pers.max_grenades = 50;
+	client->pers.max_cells = 200;
+	client->pers.max_slugs = 50;
 
 	// RAFAEL
-	client->pers.max_magslug	= 50;
-	client->pers.max_trap		= 5;
+	client->pers.max_magslug = 50;
+	client->pers.max_trap = 5;
 
 	ent->client->pers.connected = false;
-	gi.dprintf ("%s connected\n", ent->client->pers.netname);
-//	gi.bprintf (PRINT_HIGH, "%s entered the game\n", ent->client->pers.netname);
+	gi.dprintf("%s connected\n", ent->client->pers.netname);
+	//	gi.bprintf (PRINT_HIGH, "%s entered the game\n", ent->client->pers.netname);
 
-	if(ctf->value)	gi.bprintf(PRINT_HIGH, "%s joined the %s team.\n",
-			client->pers.netname, CTFTeamName(ent->client->resp.ctf_team));
-	else 	gi.bprintf (PRINT_HIGH, "%s entered the game\n",
-			client->pers.netname);
+	if (ctf->value)
+		gi.bprintf(PRINT_HIGH, "%s joined the %s team.\n", client->pers.netname, CTFTeamName(ent->client->resp.ctf_team));
+	else
+		gi.bprintf(PRINT_HIGH, "%s entered the game\n", client->pers.netname);
 }
 
-static qboolean moveEntUntilNotStartsolid(edict_t *ent, int contentmask, float step_x, float step_y, float step_z, int max_steps)
+static qboolean moveEntUntilNotStartsolid (edict_t *ent, int contentmask, float step_x, float step_y, float step_z, int max_steps)
 {
 	trace_t trace;
 
 	while (max_steps-- > 0) {
 		trace = gi.trace(ent->s.origin, ent->mins, ent->maxs, ent->s.origin, ent, contentmask);
-		if (! trace.startsolid) {
+		if (!trace.startsolid) {
 			return true;
 		}
 
@@ -424,29 +424,26 @@ static qboolean moveEntUntilNotStartsolid(edict_t *ent, int contentmask, float s
 
 void PutBotInServer (edict_t *ent)
 {
-	int		i,j;
-	gitem_t		*item;
-	gclient_t	*client;
-	vec3_t	spawn_origin, spawn_angles;
+	int i, j;
+	gitem_t *item;
+	gclient_t *client;
+	vec3_t spawn_origin, spawn_angles;
 
-	zgcl_t		*zc;		
-	
+	zgcl_t *zc;
+
 	zc = &ent->client->zc;
 
 	//current weapon
 	client = ent->client;
 
-	if (instagib && instagib->value)
-	{
+	if (instagib && instagib->value) {
 		item = FindItem("Railgun");
 		client->pers.selected_item = ITEM_INDEX(item);
 		client->pers.inventory[client->pers.selected_item] = 1;
 		client->pers.weapon = item;
 		client->pers.inventory[ITEM_INDEX(FindItem("Slugs"))] = 50;
-	}
-	else
-	{
-		item = Fdi_BLASTER;//FindItem("Blaster");
+	} else {
+		item = Fdi_BLASTER; //FindItem("Blaster");
 		client->pers.selected_item = ITEM_INDEX(item);
 		client->pers.inventory[client->pers.selected_item] = 1;
 		client->pers.weapon = item;
@@ -466,25 +463,25 @@ void PutBotInServer (edict_t *ent)
 
 	j = zc->botindex;
 	i = zc->routeindex;
-	memset (&client->zc,0,sizeof(zgcl_t));
+	memset(&client->zc, 0, sizeof(zgcl_t));
 	zc->botindex = j;
 	zc->routeindex = i;
 
-//ZOID
+	//ZOID
 	client->ctf_grapple = NULL;
 
 	item = FindItem("Grapple");
-	if(ctf->value || zigrapple->value)
+	if (ctf->value || zigrapple->value)
 		client->pers.inventory[ITEM_INDEX(item)] = 1; //ponpoko
-//ZOID
+							      //ZOID
 
 	// clear entity values
 	ent->classname = "player";
 	ent->movetype = MOVETYPE_STEP;
 	ent->solid = SOLID_BBOX;
 	ent->model = "players/male/tris.md2";
-	VectorSet (ent->mins, -16, -16, -24);
-	VectorSet (ent->maxs, 16, 16, 32);
+	VectorSet(ent->mins, -16, -16, -24);
+	VectorSet(ent->maxs, 16, 16, 32);
 
 	ent->health = ent->client->pers.health;
 	ent->max_health = ent->client->pers.max_health;
@@ -496,9 +493,9 @@ void PutBotInServer (edict_t *ent)
 	ent->s.frame = 0;
 
 	// clear entity state values
-	ent->s.modelindex = 255;		// will use the skin specified model
+	ent->s.modelindex = 255; // will use the skin specified model
 	ent->s.skinnum = ent - g_edicts - 1;
-	ShowGun(ent);					// ### Hentai ### special gun model
+	ShowGun(ent); // ### Hentai ### special gun model
 
 	ent->s.sound = 0;
 
@@ -506,14 +503,14 @@ void PutBotInServer (edict_t *ent)
 
 	ent->pain = player_pain;
 	ent->die = player_die;
-	ent->touch = NULL; 
-	
+	ent->touch = NULL;
+
 	ent->moveinfo.decel = level.time;
 	ent->pain_debounce_time = level.time;
 	ent->targetname = NULL;
 
-	ent->moveinfo.speed = 1.0;	//ジャンプ中の移動率について追加
-	ent->moveinfo.state = GETTER;	//CTFステータス初期化
+	ent->moveinfo.speed = 1.0;    //ジャンプ中の移動率について追加
+	ent->moveinfo.state = GETTER; //CTFステータス初期化
 
 	ent->prethink = NULL;
 	ent->think = Bot_Think;
@@ -522,23 +519,23 @@ void PutBotInServer (edict_t *ent)
 	ent->s.renderfx = 0;
 	ent->s.effects = 0;
 
-	SelectSpawnPoint (ent, spawn_origin, spawn_angles);
-	VectorCopy (spawn_origin, ent->s.origin);
-	VectorCopy (spawn_angles, ent->s.angles);
+	SelectSpawnPoint(ent, spawn_origin, spawn_angles);
+	VectorCopy(spawn_origin, ent->s.origin);
+	VectorCopy(spawn_angles, ent->s.angles);
 
-	ent->s.origin[2] += 1;  // make sure off ground
+	ent->s.origin[2] += 1; // make sure off ground
 	VectorCopy(ent->s.origin, ent->s.old_origin);
 	ent->groundentity = NULL;
 
 	ent->svflags = SVF_MONSTER;
 
-	qboolean success = moveEntUntilNotStartsolid(ent, MASK_BOTSOLIDX, 0, 0, 1, 16);  // try straight up first
+	qboolean success = moveEntUntilNotStartsolid(ent, MASK_BOTSOLIDX, 0, 0, 1, 16); // try straight up first
 	if (!success) {
 		vec3_t forward;
 
 		VectorCopy(ent->s.old_origin, ent->s.origin);
 		AngleVectors(ent->s.angles, forward, NULL, NULL);
-		success = moveEntUntilNotStartsolid(ent, MASK_BOTSOLIDX, forward[0], forward[1], 1, 16);  // try up plus spawn angle
+		success = moveEntUntilNotStartsolid(ent, MASK_BOTSOLIDX, forward[0], forward[1], 1, 16); // try up plus spawn angle
 
 		if (!success) {
 			VectorCopy(ent->s.old_origin, ent->s.origin);
@@ -552,12 +549,12 @@ void PutBotInServer (edict_t *ent)
 		VectorCopy(ent->s.origin, ent->s.old_origin);
 	}
 
-	VectorSet(ent->velocity,0,0,0);
+	VectorSet(ent->velocity, 0, 0, 0);
 	VectorSet(ent->client->oldvelocity, 0, 0, 0);
 	ent->moveinfo.speed = 0;
 	ent->client->ps.pmove.pm_flags &= ~PMF_DUCKED;
 
-	Set_BotAnim(ent,ANIM_BASIC,FRAME_run1,FRAME_run6);
+	Set_BotAnim(ent, ANIM_BASIC, FRAME_run1, FRAME_run6);
 	client->anim_run = true;
 
 	ent->client->ctf_grapple = NULL;
@@ -568,12 +565,12 @@ void PutBotInServer (edict_t *ent)
 	ent->client->weaponstate = WEAPON_READY;
 	ent->takedamage = DAMAGE_AIM;
 	ent->air_finished = level.time + 12;
-	ent->clipmask = MASK_PLAYERSOLID;//MASK_MONSTERSOLID;
+	ent->clipmask = MASK_PLAYERSOLID; //MASK_MONSTERSOLID;
 	ent->flags &= ~FL_NO_KNOCKBACK;
 
 	ent->client->anim_priority = ANIM_BASIC;
-//	ent->client->anim_run = true;
-	ent->s.frame = FRAME_run1-1;
+	//	ent->client->anim_run = true;
+	ent->s.frame = FRAME_run1 - 1;
 	ent->client->anim_end = FRAME_run6;
 	ent->deadflag = DEAD_NO;
 	ent->svflags &= ~SVF_DEADMONSTER;
@@ -583,37 +580,35 @@ void PutBotInServer (edict_t *ent)
 	zc->first_target = NULL;
 	zc->zcstate = STS_IDLE;
 
-	if(respawn_protection->value) {
+	if (respawn_protection->value) {
 		ent->client->invincible_framenum = level.framenum + SPAWNPROTECT;
 		ent->client->resp.spawnframe = level.framenum;
 	}
 
-	if(!chedit->value)
+	if (!chedit->value)
 		ent->s.event = EV_PLAYER_TELEPORT;
 
 
-	if(zigrapple->value)
+	if (zigrapple->value)
 		CTFPlayerResetGrapple(ent);
 
-	if(ctf->value)
-	{
-		if(!zigrapple->value)
+	if (ctf->value) {
+		if (!zigrapple->value)
 			CTFPlayerResetGrapple(ent);
 		client->zc.ctfstate = CTFS_OFFENCER;
 	}
 
 	// we must link before killbox since it uses absmin/absmax
-	if(fixflaws->value)
-		gi.linkentity (ent);
+	if (fixflaws->value)
+		gi.linkentity(ent);
 
-	if (!KillBox(ent))
-	{	//Couldn't spawn in?
+	if (!KillBox(ent)) { //Couldn't spawn in?
 	}
 
-	if(!fixflaws->value)
-		gi.linkentity (ent);
+	if (!fixflaws->value)
+		gi.linkentity(ent);
 
-	G_TouchTriggers (ent);
+	G_TouchTriggers(ent);
 }
 
 //----------------------------------------------------------------
@@ -625,65 +620,62 @@ void PutBotInServer (edict_t *ent)
 //
 //----------------------------------------------------------------
 
-qboolean SpawnBot(int i)
+qboolean SpawnBot (int i)
 {
-	edict_t		*bot,*ent;
-	int			k,j;
+	edict_t *bot, *ent;
+	int k, j;
 
 
-//gi.cprintf (NULL,PRINT_HIGH,"Called %s %s %s\n",Bot[i].netname,Bot[i].model,Bot[i].skin);
-//return false;	
+	//gi.cprintf (NULL,PRINT_HIGH,"Called %s %s %s\n",Bot[i].netname,Bot[i].model,Bot[i].skin);
+	//return false;
 
-	if(	Get_NumOfPlayer () >= game.maxclients )
-	{
+	if (Get_NumOfPlayer() >= game.maxclients) {
 		gi.cprintf(NULL, PRINT_HIGH, "Can't add bot (maxclients reached)\n");
 		return false;
 	}
 
 	bot = Get_NewClient();
-	if(bot == NULL) {
+	if (bot == NULL) {
 		gi.cprintf(NULL, PRINT_HIGH, "Can't add bot (no free edicts)\n");
 		return false;
 	}
 
-	InitializeBot( bot , i);
-	PutBotInServer ( bot );
+	InitializeBot(bot, i);
+	PutBotInServer(bot);
 
 	j = targetindex;
-	if(chedit->value)
-	{
-		for(k = CurrentIndex - 1;k > 0 ;k--)
-		{
-			if(Route[k].index == 0) break;
+	if (chedit->value) {
+		for (k = CurrentIndex - 1; k > 0; k--) {
+			if (Route[k].index == 0)
+				break;
 
-			if(Route[k].state == GRS_NORMAL)
-			{
-				if(--j <= 0) break;
-			}  
+			if (Route[k].state == GRS_NORMAL) {
+				if (--j <= 0)
+					break;
+			}
 		}
 
 		bot->client->zc.rt_locktime = level.time + FRAMETIME * 20;
 		bot->client->zc.route_trace = true;
 		bot->client->zc.routeindex = k;
-		VectorCopy(Route[k].Pt,bot->s.origin);
-		VectorAdd (bot->s.origin, bot->mins, bot->absmin);
-		VectorAdd (bot->s.origin, bot->maxs, bot->absmax);
+		VectorCopy(Route[k].Pt, bot->s.origin);
+		VectorAdd(bot->s.origin, bot->mins, bot->absmin);
+		VectorAdd(bot->s.origin, bot->maxs, bot->absmax);
 		bot->client->ps.pmove.pm_flags |= PMF_DUCKED;
-		gi.linkentity (bot);
-//		bot->s.modelindex = 0;
+		gi.linkentity(bot);
+		//		bot->s.modelindex = 0;
 
 		bot->s.event = EV_PLAYER_TELEPORT;
 
 		ent = &g_edicts[1];
-		if(ent->inuse && ent->client && !(ent->svflags & SVF_MONSTER))
-		{
+		if (ent->inuse && ent->client && !(ent->svflags & SVF_MONSTER)) {
 			ent->takedamage = DAMAGE_NO;
 			ent->movetype = MOVETYPE_NOCLIP;
 			ent->target_ent = bot;
 			ent->solid = SOLID_NOT;
 			ent->client->ps.pmove.pm_type = PM_FREEZE;
-			ent->client->ps.pmove.pm_flags |= PMF_NO_PREDICTION ;
-			VectorCopy(ent->s.origin,ent->moveinfo.start_origin);
+			ent->client->ps.pmove.pm_flags |= PMF_NO_PREDICTION;
+			VectorCopy(ent->s.origin, ent->moveinfo.start_origin);
 		}
 	}
 
@@ -698,17 +690,15 @@ qboolean SpawnBot(int i)
 //	int i	index of bot list
 //
 //----------------------------------------------------------------
-void Bot_SpawnCall()
+void Bot_SpawnCall ()
 {
 	int i;
 
-	for(i = 0;i < MAXBOTS;i++)
-	{
-		if(Bot[i].spflg == BOT_SPRESERVED)
-		{
-			if(SpawnBot(i)) Bot[i].spflg = BOT_SPAWNED;
-			else 
-			{
+	for (i = 0; i < MAXBOTS; i++) {
+		if (Bot[i].spflg == BOT_SPRESERVED) {
+			if (SpawnBot(i))
+				Bot[i].spflg = BOT_SPAWNED;
+			else {
 				Bot[i].spflg = BOT_SPAWNNOT;
 				targetindex = 0;
 			}
@@ -723,20 +713,18 @@ void Bot_SpawnCall()
 // spawn bots reserving
 //
 //----------------------------------------------------------------
-void SpawnBotReserving()
+void SpawnBotReserving ()
 {
-	int	i;
+	int i;
 
-	for(i = 0;i < MAXBOTS; i++)
-	{
-		if(Bot[i].spflg == BOT_SPAWNNOT)
-		{
+	for (i = 0; i < MAXBOTS; i++) {
+		if (Bot[i].spflg == BOT_SPAWNNOT) {
 			Bot[i].spflg = BOT_SPRESERVED;
 			SpawnWaitingBots++;
 			return;
 		}
 	}
-	gi.cprintf (NULL, PRINT_HIGH, "Now max of bots(%i) already spawned.\n",MAXBOTS);
+	gi.cprintf(NULL, PRINT_HIGH, "Now max of bots(%i) already spawned.\n", MAXBOTS);
 }
 //----------------------------------------------------------------
 //Spawn Bot Reserving 2
@@ -744,25 +732,28 @@ void SpawnBotReserving()
 // randomized spawn bots reserving
 //
 //----------------------------------------------------------------
-void SpawnBotReserving2(int *red,int *blue)
+void SpawnBotReserving2 (int *red, int *blue)
 {
-	int	i,j;
+	int i, j;
 
 	j = (int)(random() * ListedBots);
 
-	for(i = 0;i < ListedBots; i++,j++)
-	{
-		if(j >= ListedBots) j = 0;
-		if(Bot[j].spflg == BOT_SPAWNNOT)
-		{
+	for (i = 0; i < ListedBots; i++, j++) {
+		if (j >= ListedBots)
+			j = 0;
+		if (Bot[j].spflg == BOT_SPAWNNOT) {
 			Bot[j].spflg = BOT_SPRESERVED;
 			SpawnWaitingBots++;
-			if(*red > *blue) Bot[j].team = 2;
-			else Bot[j].team = 1;
-			
-			if(Bot[j].team == 1) *red = *red + 1;
-			else if(Bot[j].team == 2) *blue = *blue + 1;
-//gi.cprintf(NULL,PRINT_HIGH,"team %i\n",Bot[j].team);
+			if (*red > *blue)
+				Bot[j].team = 2;
+			else
+				Bot[j].team = 1;
+
+			if (Bot[j].team == 1)
+				*red = *red + 1;
+			else if (Bot[j].team == 2)
+				*blue = *blue + 1;
+			//gi.cprintf(NULL,PRINT_HIGH,"team %i\n",Bot[j].team);
 			return;
 		}
 	}
@@ -777,79 +768,75 @@ void SpawnBotReserving2(int *red,int *blue)
 //	int i	index of bot list
 //
 //----------------------------------------------------------------
-void RemoveBot()
+void RemoveBot ()
 {
-	int			i;
-	int			botindex;
-	edict_t		*e,*ent;
-	gclient_t	*client;
+	int i;
+	int botindex;
+	edict_t *e, *ent;
+	gclient_t *client;
 
-	for(i = MAXBOTS - 1;i >= 0;i--)
-	{
-		if(Bot[i].spflg == BOT_SPAWNED || Bot[i].spflg == BOT_NEXTLEVEL)
-		{
+	for (i = MAXBOTS - 1; i >= 0; i--) {
+		if (Bot[i].spflg == BOT_SPAWNED || Bot[i].spflg == BOT_NEXTLEVEL) {
 			break;
 		}
 	}
 
-	if(i < 0)
-	{
-		gi.cprintf (NULL, PRINT_HIGH, "No Bots in server.\n");
+	if (i < 0) {
+		gi.cprintf(NULL, PRINT_HIGH, "No Bots in server.\n");
 		return;
 	}
 
 	botindex = i;
 
 	e = &g_edicts[(int)maxclients->value];
-	for ( i = maxclients->value ; i >= 1  ; i--, e--)
-	{
-		if(!e->inuse) continue;
-		client = /*e->client;*/&game.clients[i - 1];
-		if(client == NULL) continue;
+	for (i = maxclients->value; i >= 1; i--, e--) {
+		if (!e->inuse)
+			continue;
+		client = /*e->client;*/ &game.clients[i - 1];
+		if (client == NULL)
+			continue;
 		// the first couple seconds of server time can involve a lot of
 		// freeing and allocating, so relax the replacement policy
-		if (!client->pers.connected && (e->svflags & SVF_MONSTER))
-		{
-			if(client->zc.botindex == botindex)
-			{
-				if(Bot[botindex].spflg != BOT_NEXTLEVEL) Bot[botindex].spflg = BOT_SPAWNNOT;
-				else Bot[botindex].spflg = BOT_SPRESERVED;
+		if (!client->pers.connected && (e->svflags & SVF_MONSTER)) {
+			if (client->zc.botindex == botindex) {
+				if (Bot[botindex].spflg != BOT_NEXTLEVEL)
+					Bot[botindex].spflg = BOT_SPAWNNOT;
+				else
+					Bot[botindex].spflg = BOT_SPRESERVED;
 
-				if(ctf->value && zigmode->value) ZIGDeadDropFlag(e);
+				if (ctf->value && zigmode->value)
+					ZIGDeadDropFlag(e);
 
-				gi.bprintf (PRINT_HIGH, "%s disconnected\n", e->client->pers.netname);
-	
+				gi.bprintf(PRINT_HIGH, "%s disconnected\n", e->client->pers.netname);
+
 				// send effect
-				gi.WriteByte (svc_muzzleflash);
-				gi.WriteShort (e-g_edicts);
-				gi.WriteByte (MZ_LOGOUT);
-				gi.multicast (e->s.origin, MULTICAST_PVS);
+				gi.WriteByte(svc_muzzleflash);
+				gi.WriteShort(e - g_edicts);
+				gi.WriteByte(MZ_LOGOUT);
+				gi.multicast(e->s.origin, MULTICAST_PVS);
 
 				e->s.modelindex = 0;
 				e->solid = SOLID_NOT;
 
-				if(zigrapple->value)
+				if (zigrapple->value)
 					CTFPlayerResetGrapple(e);
 
-				if(ctf->value) {
-
-					if(!zigrapple->value)
+				if (ctf->value) {
+					if (!zigrapple->value)
 						CTFPlayerResetGrapple(e);
 
 					CTFDeadDropFlag(e);
 					CTFDeadDropTech(e);
 				}
-				gi.linkentity (e);
+				gi.linkentity(e);
 
 				e->inuse = false;
-				G_FreeEdict (e);
+				G_FreeEdict(e);
 
-				if(targetindex)
-				{
+				if (targetindex) {
 					ent = &g_edicts[1];
 
-					if(ent->inuse)
-					{
+					if (ent->inuse) {
 						ent->health = 100;
 						ent->movetype = MOVETYPE_WALK;
 						ent->takedamage = DAMAGE_AIM;
@@ -857,8 +844,8 @@ void RemoveBot()
 						ent->solid = SOLID_BBOX;
 						ent->client->ps.pmove.pm_type = PM_NORMAL;
 						ent->client->ps.pmove.pm_flags = PMF_DUCKED;
-						VectorCopy(ent->moveinfo.start_origin,ent->s.origin);
-						VectorCopy(ent->moveinfo.start_origin,ent->s.old_origin);
+						VectorCopy(ent->moveinfo.start_origin, ent->s.origin);
+						VectorCopy(ent->moveinfo.start_origin, ent->s.old_origin);
 					}
 					targetindex = 0;
 				}
@@ -866,34 +853,30 @@ void RemoveBot()
 			}
 		}
 	}
-	gi.error ("Can't remove bot.");
+	gi.error("Can't remove bot.");
 }
 
 //----------------------------------------------------------------
 //Level Change Removing
 //
-// 
+//
 //
 //----------------------------------------------------------------
-void Bot_LevelChange()
+void Bot_LevelChange ()
 {
 	int i, k;
 
 	k = 0;
 
-	for(i = 0;i < MAXBOTS;i++)
-	{
-		if(Bot[i].spflg)
-		{
-			if(Bot[i].spflg == BOT_SPAWNED)
-			{
+	for (i = 0; i < MAXBOTS; i++) {
+		if (Bot[i].spflg) {
+			if (Bot[i].spflg == BOT_SPAWNED) {
 				k++;
 				Bot[i].spflg = BOT_NEXTLEVEL;
 			}
 		}
 	}
-	for(i = 0;i < k; i++)
-	{
+	for (i = 0; i < k; i++) {
 		RemoveBot();
 	}
 
@@ -910,56 +893,54 @@ void Bot_LevelChange()
 //
 //	Ragomode menu
 //
-void ZigockClientJoin(edict_t  *ent,int zclass)
+void ZigockClientJoin (edict_t *ent, int zclass)
 {
 	PMenu_Close(ent);
 
-	ent->moveinfo.sound_end = CLS_ALPHA;	//PutClientの前にクラス決定
+	ent->moveinfo.sound_end = CLS_ALPHA; //PutClientの前にクラス決定
 
 	ent->svflags &= ~SVF_NOCLIENT;
-	PutClientInServer (ent);
+	PutClientInServer(ent);
 	// add a teleportation effect
 	ent->s.event = EV_PLAYER_TELEPORT;
 	// hold in place briefly
 	ent->client->ps.pmove.pm_flags = PMF_TIME_TELEPORT;
 	ent->client->ps.pmove.pm_time = 14;
 
-	if(ctf->value)
-	{
-		gi.bprintf(PRINT_HIGH, "%s joined the %s team.\n",
-			ent->client->pers.netname, CTFTeamName(ent->client->resp.ctf_team/*desired_team*/));
+	if (ctf->value) {
+		gi.bprintf(PRINT_HIGH, "%s joined the %s team.\n", ent->client->pers.netname, CTFTeamName(ent->client->resp.ctf_team /*desired_team*/));
 	}
 }
-void ClientJoinAsAlpha(edict_t *ent,pmenu_t *entries)
+void ClientJoinAsAlpha (edict_t *ent, pmenu_t *entries)
 {
-	ZigockClientJoin(ent,1);		
+	ZigockClientJoin(ent, 1);
 }
 
 pmenu_t zgjoinmenu[] = {
-	{ "*Quake II",			PMENU_ALIGN_CENTER, NULL, NULL },
-	{ "*3rd Zigock Rago",	PMENU_ALIGN_CENTER, NULL, NULL },
-	{ NULL,					PMENU_ALIGN_CENTER, NULL, NULL },
-	{ NULL,					PMENU_ALIGN_CENTER, NULL, NULL },
-	{ "alpha",				PMENU_ALIGN_LEFT, NULL, ClientJoinAsAlpha },
-	{ "beta",				PMENU_ALIGN_LEFT, NULL, ClientJoinAsAlpha },
-	{ "gamma",				PMENU_ALIGN_LEFT, NULL, ClientJoinAsAlpha },
-	{ "delta",				PMENU_ALIGN_LEFT, NULL, ClientJoinAsAlpha },
-	{ "epsilon",			PMENU_ALIGN_LEFT, NULL, ClientJoinAsAlpha },
-	{ "zeta",				PMENU_ALIGN_LEFT, NULL, ClientJoinAsAlpha },
-	{ "eta",				PMENU_ALIGN_LEFT, NULL, ClientJoinAsAlpha },
-	{ NULL,					PMENU_ALIGN_LEFT, NULL, NULL },
-	{ "Use [ and ] to move cursor",	PMENU_ALIGN_LEFT, NULL, NULL },
-	{ "ENTER to select class",	PMENU_ALIGN_LEFT, NULL, NULL },
-	{ "ESC to Exit Menu",	PMENU_ALIGN_LEFT, NULL, NULL },
-	{ "(TAB to Return)",	PMENU_ALIGN_LEFT, NULL, NULL },
+	{ "*Quake II", PMENU_ALIGN_CENTER, NULL, NULL },
+	{ "*3rd Zigock Rago", PMENU_ALIGN_CENTER, NULL, NULL },
+	{ NULL, PMENU_ALIGN_CENTER, NULL, NULL },
+	{ NULL, PMENU_ALIGN_CENTER, NULL, NULL },
+	{ "alpha", PMENU_ALIGN_LEFT, NULL, ClientJoinAsAlpha },
+	{ "beta", PMENU_ALIGN_LEFT, NULL, ClientJoinAsAlpha },
+	{ "gamma", PMENU_ALIGN_LEFT, NULL, ClientJoinAsAlpha },
+	{ "delta", PMENU_ALIGN_LEFT, NULL, ClientJoinAsAlpha },
+	{ "epsilon", PMENU_ALIGN_LEFT, NULL, ClientJoinAsAlpha },
+	{ "zeta", PMENU_ALIGN_LEFT, NULL, ClientJoinAsAlpha },
+	{ "eta", PMENU_ALIGN_LEFT, NULL, ClientJoinAsAlpha },
+	{ NULL, PMENU_ALIGN_LEFT, NULL, NULL },
+	{ "Use [ and ] to move cursor", PMENU_ALIGN_LEFT, NULL, NULL },
+	{ "ENTER to select class", PMENU_ALIGN_LEFT, NULL, NULL },
+	{ "ESC to Exit Menu", PMENU_ALIGN_LEFT, NULL, NULL },
+	{ "(TAB to Return)", PMENU_ALIGN_LEFT, NULL, NULL },
 };
 
-void ZigockJoinMenu(edict_t *ent)
+void ZigockJoinMenu (edict_t *ent)
 {
-	PMenu_Open(ent, zgjoinmenu,4, sizeof(zgjoinmenu) / sizeof(pmenu_t));
+	PMenu_Open(ent, zgjoinmenu, 4, sizeof(zgjoinmenu) / sizeof(pmenu_t));
 }
 
-qboolean ZigockStartClient(edict_t *ent)
+qboolean ZigockStartClient (edict_t *ent)
 {
 	if (ent->moveinfo.sound_end != CLS_NONE)
 		return false;
@@ -969,7 +950,7 @@ qboolean ZigockStartClient(edict_t *ent)
 	ent->solid = SOLID_NOT;
 	ent->svflags |= SVF_NOCLIENT;
 	ent->client->ps.gunindex = 0;
-	gi.linkentity (ent);
+	gi.linkentity(ent);
 
 	ZigockJoinMenu(ent);
 	return true;
@@ -983,86 +964,79 @@ qboolean ZigockStartClient(edict_t *ent)
 //===============================
 static void AirSight_Explode (edict_t *ent)
 {
-	vec3_t		origin;
-	int			mod;
+	vec3_t origin;
+	int mod;
 
-//	if (ent->owner->client && !(ent->owner->svflags & SVF_DEADMONSTER))
-//		PlayerNoise(ent->owner, ent->s.origin, PNOISE_IMPACT);
+	//	if (ent->owner->client && !(ent->owner->svflags & SVF_DEADMONSTER))
+	//		PlayerNoise(ent->owner, ent->s.origin, PNOISE_IMPACT);
 
-	gi.sound (ent, CHAN_AUTO, gi.soundindex("3zb/airexp.wav"), 1, ATTN_NONE, 0);
+	gi.sound(ent, CHAN_AUTO, gi.soundindex("3zb/airexp.wav"), 1, ATTN_NONE, 0);
 
 	//FIXME: if we are onground then raise our Z just a bit since we are a point?
 	mod = MOD_AIRSTRIKE;
 
 	T_RadiusDamage(ent, ent->owner, ent->dmg, ent->enemy, ent->dmg_radius, mod);
 
-	VectorMA (ent->s.origin, -0.02, ent->velocity, origin);
-	gi.WriteByte (svc_temp_entity);
-	if (ent->waterlevel)
-	{
-		gi.WriteByte (TE_ROCKET_EXPLOSION_WATER);
+	VectorMA(ent->s.origin, -0.02, ent->velocity, origin);
+	gi.WriteByte(svc_temp_entity);
+	if (ent->waterlevel) {
+		gi.WriteByte(TE_ROCKET_EXPLOSION_WATER);
+	} else {
+		gi.WriteByte(TE_ROCKET_EXPLOSION);
 	}
-	else
-	{
-		gi.WriteByte (TE_ROCKET_EXPLOSION);
-	}
-	gi.WritePosition (origin);
-	gi.multicast (ent->s.origin, MULTICAST_PHS);
+	gi.WritePosition(origin);
+	gi.multicast(ent->s.origin, MULTICAST_PHS);
 
-	G_FreeEdict (ent);
+	G_FreeEdict(ent);
 }
 
-void AirSight_Think(edict_t *ent)
+void AirSight_Think (edict_t *ent)
 {
-//	gi.sound (ent, CHAN_AUTO, gi.soundindex("medic/medatck1.wav"), 1, ATTN_NORM, 0);
-	gi.sound (ent, CHAN_BODY, gi.soundindex("3zb/airloc.wav"), 1, ATTN_NONE, 0);
+	//	gi.sound (ent, CHAN_AUTO, gi.soundindex("medic/medatck1.wav"), 1, ATTN_NORM, 0);
+	gi.sound(ent, CHAN_BODY, gi.soundindex("3zb/airloc.wav"), 1, ATTN_NONE, 0);
 
 	ent->dmg = 120 + random() * 60;
 	ent->dmg_radius = 200;
 
-	ent->s.modelindex = gi.modelindex ("sprites/airsight.sp2");
-	VectorCopy(ent->target_ent->s.origin,ent->s.origin);
+	ent->s.modelindex = gi.modelindex("sprites/airsight.sp2");
+	VectorCopy(ent->target_ent->s.origin, ent->s.origin);
 
-	if( ent->owner->client->resp.ctf_team == CTF_TEAM2 && ctf->value)
-	{ 
+	if (ent->owner->client->resp.ctf_team == CTF_TEAM2 && ctf->value) {
 		ent->s.frame = 1;
-	}
-	else ent->s.frame = 0;
+	} else
+		ent->s.frame = 0;
 
 	ent->think = AirSight_Explode;
 	ent->nextthink = level.time + FRAMETIME * 6;
-	gi.linkentity (ent);
+	gi.linkentity(ent);
 }
-void AirStrike_Think(edict_t *ent)
+void AirStrike_Think (edict_t *ent)
 {
-	int	i,j;
-	edict_t	*target,*sight;
-	trace_t	rs_trace;
+	int i, j;
+	edict_t *target, *sight;
+	trace_t rs_trace;
 
-	vec3_t	point;
+	vec3_t point;
 
-	ent->nextthink = level.time + ent->moveinfo.speed * 0.5 /300;
+	ent->nextthink = level.time + ent->moveinfo.speed * 0.5 / 300;
 	ent->think = G_FreeEdict;
-//	ent->s.modelindex = gi.modelindex ("models/ships/bigviper/tris.md2");
+	//	ent->s.modelindex = gi.modelindex ("models/ships/bigviper/tris.md2");
 
-	VectorCopy(ent->s.origin,point);
+	VectorCopy(ent->s.origin, point);
 	point[2] = ent->moveinfo.start_angles[2];
 
 	j = 1;
-	for ( i = 1 ; i <= maxclients->value; i++)
-	{
-		target =  &g_edicts[i];
-		if(!target->inuse || target->deadflag || target == ent->owner) continue;
+	for (i = 1; i <= maxclients->value; i++) {
+		target = &g_edicts[i];
+		if (!target->inuse || target->deadflag || target == ent->owner)
+			continue;
 
-		if( target->classname[0] == 'p')
-		{
+		if (target->classname[0] == 'p') {
 			//ctf ならチームメイト無視
-			if(!ctf->value || (ctf->value && ent->owner->client->resp.ctf_team != target->client->resp.ctf_team))
-			{
-				rs_trace = gi.trace (point,NULL,NULL,target->s.origin,ent, CONTENTS_SOLID | CONTENTS_WINDOW | CONTENTS_LAVA | CONTENTS_SLIME);
+			if (!ctf->value || (ctf->value && ent->owner->client->resp.ctf_team != target->client->resp.ctf_team)) {
+				rs_trace = gi.trace(point, NULL, NULL, target->s.origin, ent, CONTENTS_SOLID | CONTENTS_WINDOW | CONTENTS_LAVA | CONTENTS_SLIME);
 
-				if(rs_trace.fraction == 1.0)
-				{
+				if (rs_trace.fraction == 1.0) {
 					sight = G_Spawn();
 
 					sight->classname = "airstrike";
@@ -1072,94 +1046,92 @@ void AirStrike_Think(edict_t *ent)
 					sight->solid = SOLID_NOT;
 					sight->owner = ent->owner;
 					sight->target_ent = target;
-					gi.linkentity (sight);
+					gi.linkentity(sight);
 					j++;
-				} 
+				}
 			}
 		}
 	}
-
 }
-void Cmd_AirStrike(edict_t *ent)
+void Cmd_AirStrike (edict_t *ent)
 {
-	edict_t	*viper;
-	trace_t	rs_trace;
+	edict_t *viper;
+	trace_t rs_trace;
 
-	vec3_t	strpoint,tts,tte,tmp;
+	vec3_t strpoint, tts, tte, tmp;
 
-	vec_t	f;
+	vec_t f;
 
-	VectorCopy(ent->s.origin,strpoint);
+	VectorCopy(ent->s.origin, strpoint);
 	strpoint[2] += 8190;
-	
-	rs_trace = gi.trace (ent->s.origin,NULL,NULL,strpoint,ent, MASK_SHOT);
 
-	if(!(rs_trace.surface && (rs_trace.surface->flags & SURF_SKY)))
-	{
-		gi.cprintf(ent,PRINT_HIGH,"can't call Viper.\n");
+	rs_trace = gi.trace(ent->s.origin, NULL, NULL, strpoint, ent, MASK_SHOT);
+
+	if (!(rs_trace.surface && (rs_trace.surface->flags & SURF_SKY))) {
+		gi.cprintf(ent, PRINT_HIGH, "can't call Viper.\n");
 		return;
 	}
-/*	if((rs_trace.endpos[2] - ent->s.origin[2]) < 300)
+	/*	if((rs_trace.endpos[2] - ent->s.origin[2]) < 300)
 	{
 		gi.cprintf(ent,PRINT_HIGH,"can't call Viper.\n");	
 	}*/
 
-	VectorCopy(rs_trace.endpos,strpoint);
-	strpoint[2] -= 16;	//ちょっとだけ下へずらす
+	VectorCopy(rs_trace.endpos, strpoint);
+	strpoint[2] -= 16; //ちょっとだけ下へずらす
 
-	f = ent->s.angles[YAW]*M_PI*2 / 360;
-	tts[0] = cos(f) * (-8190) ;
-	tts[1] = sin(f) * (-8190) ;
+	f = ent->s.angles[YAW] * M_PI * 2 / 360;
+	tts[0] = cos(f) * (-8190);
+	tts[1] = sin(f) * (-8190);
 	tts[2] = 0;
 
-	tte[0] = cos(f) *8190 ;
-	tte[1] = sin(f) *8190 ;
+	tte[0] = cos(f) * 8190;
+	tte[1] = sin(f) * 8190;
 	tte[2] = 0;
 
 	viper = G_Spawn();
-	VectorClear (viper->mins);
-	VectorClear (viper->maxs);
-	viper->movetype = /*MOVETYPE_FLYMISSILE;//MOVETYPE_STEP;*/MOVETYPE_NOCLIP;
+	VectorClear(viper->mins);
+	VectorClear(viper->maxs);
+	viper->movetype = /*MOVETYPE_FLYMISSILE;//MOVETYPE_STEP;*/ MOVETYPE_NOCLIP;
 	viper->solid = SOLID_NOT;
 	viper->owner = ent;
-	viper->s.modelindex = gi.modelindex ("models/ships/viper/tris.md2");
+	viper->s.modelindex = gi.modelindex("models/ships/viper/tris.md2");
 
-	VectorCopy(ent->s.angles,viper->s.angles);
+	VectorCopy(ent->s.angles, viper->s.angles);
 	viper->s.angles[2] = 0;
-	rs_trace = gi.trace (strpoint,NULL,NULL,tts,ent,  MASK_SHOT);
-	tts[0] = cos(f) * (-600) ;
-	tts[1] = sin(f) * (-600) ;
-	VectorAdd(rs_trace.endpos,tts,tmp);
-	VectorCopy(tmp,viper->s.origin);
+	rs_trace = gi.trace(strpoint, NULL, NULL, tts, ent, MASK_SHOT);
+	tts[0] = cos(f) * (-600);
+	tts[1] = sin(f) * (-600);
+	VectorAdd(rs_trace.endpos, tts, tmp);
+	VectorCopy(tmp, viper->s.origin);
 
 
-	viper->velocity[0] = cos(f) * 300; 
+	viper->velocity[0] = cos(f) * 300;
 	viper->velocity[1] = sin(f) * 300;
 	viper->velocity[2] = 0;
 
-	rs_trace = gi.trace (strpoint,NULL,NULL,tte,ent,  MASK_SHOT);
-	VectorSubtract(viper->s.origin,rs_trace.endpos,tts);
+	rs_trace = gi.trace(strpoint, NULL, NULL, tte, ent, MASK_SHOT);
+	VectorSubtract(viper->s.origin, rs_trace.endpos, tts);
 	f = VectorLength(tts);
 
-	gi.sound (viper, CHAN_AUTO, gi.soundindex("world/flyby1.wav"), 1, ATTN_NONE, 0);
+	gi.sound(viper, CHAN_AUTO, gi.soundindex("world/flyby1.wav"), 1, ATTN_NONE, 0);
 
-	gi.sound (ent, CHAN_AUTO, gi.soundindex("world/incoming.wav"), 1, ATTN_NONE, 0);
+	gi.sound(ent, CHAN_AUTO, gi.soundindex("world/incoming.wav"), 1, ATTN_NONE, 0);
 
-	viper->nextthink = level.time + f *0.75 /300;
+	viper->nextthink = level.time + f * 0.75 / 300;
 	viper->think = AirStrike_Think;
 	viper->moveinfo.speed = f;
 
-//	viper->s.sound = gi.soundindex ("weapons/rockfly.wav");
+	//	viper->s.sound = gi.soundindex ("weapons/rockfly.wav");
 
 	//	viper->s.effects |= EF_ROTATE | EF_COLOR_SHELL;
-//	viper->s.renderfx |= RF_SHELL_BLUE | RF_SHELL_GREEN;
-	VectorCopy(strpoint,viper->moveinfo.start_angles);	//strikepoint
-	
-//	viper->think = Pod_think;
-//	viper->nextthink = level.time + FRAMETIME;
-	viper->classname = "viper";	
+	//	viper->s.renderfx |= RF_SHELL_BLUE | RF_SHELL_GREEN;
+	VectorCopy(strpoint, viper->moveinfo.start_angles); //strikepoint
+
+	//	viper->think = Pod_think;
+	//	viper->nextthink = level.time + FRAMETIME;
+	viper->classname = "viper";
 	viper->s.origin[2] += 16;
-	gi.linkentity (viper);
+	gi.linkentity(viper);
 }
 
 /*
@@ -1176,20 +1148,17 @@ int RealClients ()
 	int realclients = 0;
 	edict_t *ent;
 
-	for (i = 0; i < maxclients->value; i++)
-	{
+	for (i = 0; i < maxclients->value; i++) {
 		ent = g_edicts + 1 + i;
 
 		if (!ent->inuse)
 			continue;
 
-		if (ent->client && !(ent->svflags & SVF_MONSTER))
-		{
-			if(zigintro->value) {
-				if(ent->client->pers.joined)
+		if (ent->client && !(ent->svflags & SVF_MONSTER)) {
+			if (zigintro->value) {
+				if (ent->client->pers.joined)
 					realclients++;
-			}
-			else
+			} else
 				realclients++;
 		}
 	}
@@ -1209,8 +1178,7 @@ int BotClients ()
 	int botclients = 0;
 	edict_t *ent;
 
-	for (i = 0; i < maxclients->value; i++)
-	{
+	for (i = 0; i < maxclients->value; i++) {
 		ent = g_edicts + 1 + i;
 
 		if (!ent->inuse)
@@ -1231,32 +1199,30 @@ Control Bots in 'autobot'
 */
 void AutoBot ()
 {
-	int     clients,bots,i;
-	int     delay = 300;
-	int     buffer = 10 * autospawn->value;
-	int     remaining = timelimit->value * 60 - level.time;
-	float   startup = 15.0f;
+	int clients, bots, i;
+	int delay = 300;
+	int buffer = 10 * autospawn->value;
+	int remaining = timelimit->value * 60 - level.time;
+	float startup = 15.0f;
 
 	clients = RealClients();
 	bots = BotClients();
 
-	if(level.time < startup)
+	if (level.time < startup)
 		delay = 100;
 
-	if(clients > autobot->value && bots > 0 && level.time > startup
-		&& remaining > 10) {
-			level.autobotframe = level.framenum;
-			for (i=0 ; i < bots ; i++)
-				RemoveBot();
+	if (clients > autobot->value && bots > 0 && level.time > startup && remaining > 10) {
+		level.autobotframe = level.framenum;
+		for (i = 0; i < bots; i++)
+			RemoveBot();
 	}
 
-	if(clients <= autobot->value && bots == 0 && remaining > buffer
-		&& (level.framenum - level.autobotframe) > delay && !level.intermissiontime) {
-			for (i=0 ; i < autospawn->value ; i++) {
-				int delta = autospawn->value - SpawnWaitingBots;
-				while (delta-- > 0) {
-					SpawnBotReserving();
-				}
+	if (clients <= autobot->value && bots == 0 && remaining > buffer && (level.framenum - level.autobotframe) > delay && !level.intermissiontime) {
+		for (i = 0; i < autospawn->value; i++) {
+			int delta = autospawn->value - SpawnWaitingBots;
+			while (delta-- > 0) {
+				SpawnBotReserving();
 			}
+		}
 	}
 }

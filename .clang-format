@@ -1,0 +1,32 @@
+BasedOnStyle: Mozilla
+IndentWidth: 8
+UseTab: Always
+TabWidth: 8
+ColumnLimit: 0
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction: true
+  AfterControlStatement: false
+  AfterStruct: true
+  AfterEnum: true
+  BeforeElse: false
+AlwaysBreakAfterDefinitionReturnType: None
+BreakAfterReturnType: None
+SpaceBeforeParens: Custom
+SpaceBeforeParensOptions:
+  AfterControlStatements: true
+  AfterFunctionDefinitionName: true
+  AfterFunctionDeclarationName: true
+PointerAlignment: Right
+AlignAfterOpenBracket: DontAlign
+AlignConsecutiveDeclarations: false
+AlignTrailingComments: true
+IndentCaseLabels: true
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 2
+SortIncludes: false
+Standard: Latest
+ReflowComments: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false

@@ -165,17 +165,16 @@ void M_CheckGround (edict_t *ent)
 
 void M_CheckGround (edict_t *ent)
 {
-	vec3_t		point,stp,v1,v2;
-	trace_t		trace,tracep;
+	vec3_t point, stp, v1, v2;
+	trace_t trace, tracep;
 
-	if (ent->flags & (FL_SWIM|FL_FLY))
+	if (ent->flags & (FL_SWIM | FL_FLY))
 		return;
 
-	if(ent->client)
-	{
+	if (ent->client) {
 		ent->client->zc.ground_slope = 1.0;
 
-/*		if(	ent->client->ctf_grapple && ent->client->ctf_grapplestate == CTF_GRAPPLE_STATE_PULL)
+		/*		if(	ent->client->ctf_grapple && ent->client->ctf_grapplestate == CTF_GRAPPLE_STATE_PULL)
 		{
 			if(ent->velocity[2] > 0)
 			{
@@ -184,51 +183,45 @@ void M_CheckGround (edict_t *ent)
 			}
 		}*/
 	}
-		//ent->groundentity = NULL;
-	if (ent->velocity[2] > 100)
-	{
+	//ent->groundentity = NULL;
+	if (ent->velocity[2] > 100) {
 		ent->groundentity = NULL;
-//gi.bprintf(PRINT_HIGH,"ogeeX\n");
+		//gi.bprintf(PRINT_HIGH,"ogeeX\n");
 		return;
 	}
 
-// if the hull point one-quarter unit down is solid the entity is on ground
+	// if the hull point one-quarter unit down is solid the entity is on ground
 	point[0] = ent->s.origin[0];
 	point[1] = ent->s.origin[1];
 	point[2] = ent->s.origin[2] - GROUND_TEST_EPSILON;
 
 	trace = gi.trace(ent->s.origin, ent->mins, ent->maxs, point, ent, MASK_BOTGROUND /*MASK_BOTSOLID*/ /*CONTENTS_SOLID|CONTENTS_WINDOW|CONTENTS_MONSTER*/);
-		//MASK_BOTSOLID /*MASK_PLAYERSOLID*/);
+	//MASK_BOTSOLID /*MASK_PLAYERSOLID*/);
 
 	// check steepness
-	if ( trace.fraction == 1.0/*trace.plane.normal[2] < 0.7*/ 
-		&& (!trace.startsolid && !trace.allsolid))
-	{
+	if (trace.fraction == 1.0 /*trace.plane.normal[2] < 0.7*/
+	    && (!trace.startsolid && !trace.allsolid)) {
 		ent->groundentity = NULL;
-//		ent->groundentity_linkcount = trace.ent->linkcount;
-//gi.bprintf(PRINT_HIGH,"NULLKUN\n");
+		//		ent->groundentity_linkcount = trace.ent->linkcount;
+		//gi.bprintf(PRINT_HIGH,"NULLKUN\n");
 		return;
 	}
 
-	if(/*trace.ent &&*/ (/*trace.startsolid ||*/ trace.allsolid))
-	{
-		if(1/*trace.ent->classname[0] == 'f' && trace.ent->classname[5] == 'r'*/)
-		{
-			VectorSet(v1,-16,-16,-24);
-			VectorSet(v2,16,16,4);
+	if (/*trace.ent &&*/ (/*trace.startsolid ||*/ trace.allsolid)) {
+		if (1 /*trace.ent->classname[0] == 'f' && trace.ent->classname[5] == 'r'*/) {
+			VectorSet(v1, -16, -16, -24);
+			VectorSet(v2, 16, 16, 4);
 
-			VectorCopy(ent->s.origin,stp);
-//			gi.bprintf(PRINT_HIGH,"ogeeY\n");	
+			VectorCopy(ent->s.origin, stp);
+			//			gi.bprintf(PRINT_HIGH,"ogeeY\n");
 			stp[2] += 24;
-			tracep = gi.trace(stp, v1, v2, point, ent, MASK_BOTGROUND  /*MASK_BOTSOLID*/ /*MASK_PLAYERSOLID*/);
-			if(tracep.ent && !tracep.allsolid /*&& !tracep.startsolid*/)
-			{
-				if (tracep.ent->classname[0] == 'f' /*&& tracep.ent->classname[5] == 'r'*/)
-				{
-					VectorCopy(tracep.endpos,ent->s.origin);
-//					gi.bprintf(PRINT_HIGH,"ogee done\n");
+			tracep = gi.trace(stp, v1, v2, point, ent, MASK_BOTGROUND /*MASK_BOTSOLID*/ /*MASK_PLAYERSOLID*/);
+			if (tracep.ent && !tracep.allsolid /*&& !tracep.startsolid*/) {
+				if (tracep.ent->classname[0] == 'f' /*&& tracep.ent->classname[5] == 'r'*/) {
+					VectorCopy(tracep.endpos, ent->s.origin);
+					//					gi.bprintf(PRINT_HIGH,"ogee done\n");
 					ent->groundentity = tracep.ent;
-					/*if(tracep.ent->classname[5] == 'r')*/	ent->groundentity_linkcount = tracep.ent->linkcount;
+					/*if(tracep.ent->classname[5] == 'r')*/ ent->groundentity_linkcount = tracep.ent->linkcount;
 					//ent->velocity[2] = 0;
 					gi.linkentity(ent);
 					return;
@@ -237,44 +230,41 @@ void M_CheckGround (edict_t *ent)
 		}
 	}
 
-//	ent->groundentity = trace.ent;
-//	ent->groundentity_linkcount = trace.ent->linkcount;
-//	if (!trace.startsolid && !trace.allsolid)
-//		VectorCopy (trace.endpos, ent->s.origin);
+	//	ent->groundentity = trace.ent;
+	//	ent->groundentity_linkcount = trace.ent->linkcount;
+	//	if (!trace.startsolid && !trace.allsolid)
+	//		VectorCopy (trace.endpos, ent->s.origin);
 
-	if (/*!trace.startsolid &&*/ !trace.allsolid)
-	{
-		if(ent->client)
-		{
+	if (/*!trace.startsolid &&*/ !trace.allsolid) {
+		if (ent->client) {
 			ent->client->zc.ground_contents = trace.contents;
 			ent->client->zc.ground_slope = trace.plane.normal[2];
 		}
-		VectorCopy (trace.endpos, ent->s.origin);
+		VectorCopy(trace.endpos, ent->s.origin);
 		ent->groundentity = trace.ent;
 		ent->groundentity_linkcount = trace.ent->linkcount;
-	//	ent->velocity[2] = 0;
-//		VectorCopy(trace.endpos,ent->s.origin);
+		//	ent->velocity[2] = 0;
+		//		VectorCopy(trace.endpos,ent->s.origin);
 	}
-//	else gi.bprintf(PRINT_HIGH,"mopmop! %x %f\n",trace.contents,ent->velocity[2]);
+	//	else gi.bprintf(PRINT_HIGH,"mopmop! %x %f\n",trace.contents,ent->velocity[2]);
 	gi.linkentity(ent);
 }
 
 
 void M_CatagorizePosition (edict_t *ent)
 {
-	vec3_t		point;
-	int			cont;
+	vec3_t point;
+	int cont;
 
-//
-// get waterlevel
-//
+	//
+	// get waterlevel
+	//
 	point[0] = ent->s.origin[0];
 	point[1] = ent->s.origin[1];
-	point[2] = ent->s.origin[2] + ent->mins[2] + 1;	
-	cont = gi.pointcontents (point);
+	point[2] = ent->s.origin[2] + ent->mins[2] + 1;
+	cont = gi.pointcontents(point);
 
-	if (!(cont & MASK_WATER))
-	{
+	if (!(cont & MASK_WATER)) {
 		ent->waterlevel = 0;
 		ent->watertype = 0;
 		return;
@@ -283,13 +273,13 @@ void M_CatagorizePosition (edict_t *ent)
 	ent->watertype = cont;
 	ent->waterlevel = 1;
 	point[2] += 26;
-	cont = gi.pointcontents (point);
+	cont = gi.pointcontents(point);
 	if (!(cont & MASK_WATER))
 		return;
 
 	ent->waterlevel = 2;
 	point[2] += 22;
-	cont = gi.pointcontents (point);
+	cont = gi.pointcontents(point);
 	if (cont & MASK_WATER)
 		ent->waterlevel = 3;
 }
@@ -386,23 +376,23 @@ void M_WorldEffects (edict_t *ent)
 
 void M_droptofloor (edict_t *ent)
 {
-	vec3_t		end;
-	trace_t		trace;
+	vec3_t end;
+	trace_t trace;
 
 	ent->s.origin[2] += 1;
-	VectorCopy (ent->s.origin, end);
+	VectorCopy(ent->s.origin, end);
 	end[2] -= 256;
-	
-	trace = gi.trace (ent->s.origin, ent->mins, ent->maxs, end, ent, MASK_MONSTERSOLID);
+
+	trace = gi.trace(ent->s.origin, ent->mins, ent->maxs, end, ent, MASK_MONSTERSOLID);
 
 	if (trace.fraction == 1 || trace.allsolid)
 		return;
 
-	VectorCopy (trace.endpos, ent->s.origin);
+	VectorCopy(trace.endpos, ent->s.origin);
 
-	gi.linkentity (ent);
-	M_CheckGround (ent);
-	M_CatagorizePosition (ent);
+	gi.linkentity(ent);
+	M_CheckGround(ent);
+	M_CatagorizePosition(ent);
 }
 
 /*

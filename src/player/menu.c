@@ -1,6 +1,6 @@
 #include "../header/local.h"
 
-void PMenu_Open(edict_t *ent, pmenu_t *entries, int cur, int num)
+void PMenu_Open (edict_t *ent, pmenu_t *entries, int cur, int num)
 {
 	pmenuhnd_t *hnd;
 	pmenu_t *p;
@@ -35,14 +35,13 @@ void PMenu_Open(edict_t *ent, pmenu_t *entries, int cur, int num)
 	ent->client->inmenu = true;
 	ent->client->menu = hnd;
 
-	if(!(ent->svflags & SVF_MONSTER))
-	{
+	if (!(ent->svflags & SVF_MONSTER)) {
 		PMenu_Update(ent);
-		gi.unicast (ent, true);
+		gi.unicast(ent, true);
 	}
 }
 
-void PMenu_Close(edict_t *ent)
+void PMenu_Close (edict_t *ent)
 {
 	if (!ent->client->menu)
 		return;
@@ -53,7 +52,7 @@ void PMenu_Close(edict_t *ent)
 	ent->client->inmenu = false;
 }
 
-void PMenu_Update(edict_t *ent)
+void PMenu_Update (edict_t *ent)
 {
 	char string[1400];
 	int i;
@@ -82,14 +81,13 @@ void PMenu_Update(edict_t *ent)
 		}
 		sprintf(string + strlen(string), "yv %d ", 32 + i * 8);
 		if (p->align == PMENU_ALIGN_CENTER)
-			x = 196/2 - strlen(t)*4 + 64;
+			x = 196 / 2 - strlen(t) * 4 + 64;
 		else if (p->align == PMENU_ALIGN_RIGHT)
-			x = 64 + (196 - strlen(t)*8);
+			x = 64 + (196 - strlen(t) * 8);
 		else
 			x = 64;
 
-		sprintf(string + strlen(string), "xv %d ",
-			x - ((hnd->cur == i) ? 8 : 0));
+		sprintf(string + strlen(string), "xv %d ", x - ((hnd->cur == i) ? 8 : 0));
 
 		if (hnd->cur == i)
 			sprintf(string + strlen(string), "string2 \"\x0d%s\" ", t);
@@ -100,11 +98,11 @@ void PMenu_Update(edict_t *ent)
 		alt = false;
 	}
 
-	gi.WriteByte (svc_layout);
-	gi.WriteString (string);
+	gi.WriteByte(svc_layout);
+	gi.WriteString(string);
 }
 
-void PMenu_Next(edict_t *ent)
+void PMenu_Next (edict_t *ent)
 {
 	pmenuhnd_t *hnd;
 	int i;
@@ -131,14 +129,13 @@ void PMenu_Next(edict_t *ent)
 	} while (i != hnd->cur);
 
 	hnd->cur = i;
-	if(!(ent->svflags & SVF_MONSTER))
-	{
+	if (!(ent->svflags & SVF_MONSTER)) {
 		PMenu_Update(ent);
-		gi.unicast (ent, true);
+		gi.unicast(ent, true);
 	}
 }
 
-void PMenu_Prev(edict_t *ent)
+void PMenu_Prev (edict_t *ent)
 {
 	pmenuhnd_t *hnd;
 	int i;
@@ -168,14 +165,13 @@ void PMenu_Prev(edict_t *ent)
 
 	hnd->cur = i;
 
-	if(!(ent->svflags & SVF_MONSTER))
-	{
+	if (!(ent->svflags & SVF_MONSTER)) {
 		PMenu_Update(ent);
-		gi.unicast (ent, true);
+		gi.unicast(ent, true);
 	}
 }
 
-void PMenu_Select(edict_t *ent)
+void PMenu_Select (edict_t *ent)
 {
 	pmenuhnd_t *hnd;
 	pmenu_t *p;
