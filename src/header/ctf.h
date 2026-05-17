@@ -94,7 +94,7 @@ char *CTFOtherTeamName (int team);
 void CTFAssignSkin (edict_t *ent, char *s);
 void CTFAssignTeam (gclient_t *who);
 edict_t *SelectCTFSpawnPoint (edict_t *ent);
-qboolean CTFPickup_Flag (edict_t *ent, edict_t *other);
+bool CTFPickup_Flag (edict_t *ent, edict_t *other);
 void CTFDrop_Flag (edict_t *ent, gitem_t *item);
 void CTFEffects (edict_t *player);
 void CTFCalcScores (void);
@@ -117,23 +117,23 @@ void CTFResetGrapple (edict_t *self);
 
 //TECH
 gitem_t *CTFWhat_Tech (edict_t *ent);
-qboolean CTFPickup_Tech (edict_t *ent, edict_t *other);
+bool CTFPickup_Tech (edict_t *ent, edict_t *other);
 void CTFDrop_Tech (edict_t *ent, gitem_t *item);
 void CTFDeadDropTech (edict_t *ent);
 void CTFSetupTechSpawn (void);
 int CTFApplyResistance (edict_t *ent, int dmg);
 int CTFApplyStrength (edict_t *ent, int dmg);
-qboolean CTFApplyStrengthSound (edict_t *ent);
-qboolean CTFApplyHaste (edict_t *ent);
+bool CTFApplyStrengthSound (edict_t *ent);
+bool CTFApplyHaste (edict_t *ent);
 void CTFApplyHasteSound (edict_t *ent);
 void CTFApplyRegeneration (edict_t *ent);
-qboolean CTFHasRegeneration (edict_t *ent);
+bool CTFHasRegeneration (edict_t *ent);
 void CTFRespawnTech (edict_t *ent);
 
 void CTFOpenJoinMenu (edict_t *ent);
-qboolean CTFStartClient (edict_t *ent);
+bool CTFStartClient (edict_t *ent);
 
-qboolean CTFCheckRules (void);
+bool CTFCheckRules (void);
 
 void SP_misc_ctf_banner (edict_t *ent);
 void SP_misc_ctf_small_banner (edict_t *ent);

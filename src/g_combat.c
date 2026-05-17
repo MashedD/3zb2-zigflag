@@ -11,7 +11,7 @@ Returns true if the inflictor can directly damage the target.  Used for
 explosions and melee attacks.
 ============
 */
-qboolean CanDamage (edict_t *targ, edict_t *inflictor)
+bool CanDamage (edict_t *targ, edict_t *inflictor)
 {
 	vec3_t dest;
 	trace_t trace;
@@ -271,7 +271,7 @@ static int CheckArmor (edict_t *ent, vec3_t point, vec3_t normal, int damage, in
 	return save;
 }
 
-qboolean CheckTeamDamage (edict_t *targ, edict_t *attacker)
+bool CheckTeamDamage (edict_t *targ, edict_t *attacker)
 {
 	//ZOID
 	if (ctf->value && !tdm->value && targ->client && attacker->client)
@@ -528,7 +528,7 @@ void T_RadiusDamage (edict_t *inflictor, edict_t *attacker, float damage, edict_
 	}
 }
 
-qboolean KillerFlagCheck (edict_t *ent)
+bool KillerFlagCheck (edict_t *ent)
 {
 	edict_t *flagholder;
 	flagholder = ent;

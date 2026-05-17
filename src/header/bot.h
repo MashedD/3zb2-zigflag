@@ -6,7 +6,7 @@
 void player_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point);
 
 //bot spawn & remove
-qboolean SpawnBot (int i);
+bool SpawnBot (int i);
 void Bot_LevelChange ();
 void Load_BotInfo ();
 void Bot_SpawnCall ();
@@ -33,8 +33,8 @@ void Weapon_Phalanx (edict_t *ent);
 void Weapon_Trap (edict_t *ent);
 
 // wideuse
-qboolean Bot_trace (edict_t *ent, edict_t *other);
-qboolean Bot_trace2 (edict_t *ent, vec3_t ttz);
+bool Bot_trace (edict_t *ent, edict_t *other);
+bool Bot_trace2 (edict_t *ent, vec3_t ttz);
 float Get_yaw (vec3_t vec);   //
 float Get_pitch (vec3_t vec); //
 float Get_vec_yaw (vec3_t vec, float yaw);
@@ -44,9 +44,9 @@ int Bot_moveT (edict_t *ent, float ryaw, vec3_t pos, float dist, float *bottom);
 void Set_BotAnim (edict_t *ent, int anim, int frame, int end);
 void plat_go_up (edict_t *ent);
 int Get_KindWeapon (gitem_t *it);
-qboolean TargetJump (edict_t *ent, vec3_t tpos);
-qboolean Bot_traceS (edict_t *ent, edict_t *other);
-qboolean Bot_Fall (edict_t *ent, vec3_t pos, float dist);
+bool TargetJump (edict_t *ent, vec3_t tpos);
+bool Bot_traceS (edict_t *ent, edict_t *other);
+bool Bot_Fall (edict_t *ent, vec3_t pos, float dist);
 
 void SelectFlagSpawnPoint (edict_t *ent, vec3_t origin, vec3_t angles);
 void SelectSpawnPoint (edict_t *ent, vec3_t origin, vec3_t angles);
@@ -54,13 +54,13 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo);
 void CopyToBodyQue (edict_t *ent);
 
 //route util
-qboolean TraceX (edict_t *ent, vec3_t p2);
+bool TraceX (edict_t *ent, vec3_t p2);
 void Move_LastRouteIndex ();
 void Get_RouteOrigin (int index, vec3_t pos);
 
 //Bot Func
 void ZigockJoinMenu (edict_t *ent);
-qboolean ZigockStartClient (edict_t *ent);
+bool ZigockStartClient (edict_t *ent);
 void Cmd_AirStrike (edict_t *ent);
 void BotEndServerFrame (edict_t *ent);
 void SpawnItem2 (edict_t *ent, gitem_t *item);
@@ -83,7 +83,7 @@ void UpdateExplIndex (edict_t *ent);
 void ZIGDrop_Flag (edict_t *ent, gitem_t *item);
 void ZIGDeadDropFlag (edict_t *ent);
 void ZIGBounce_Flag (edict_t *ent, gitem_t *item);
-qboolean ZIGDrop_FlagCheck (edict_t *ent, gitem_t *item);
+bool ZIGDrop_FlagCheck (edict_t *ent, gitem_t *item);
 edict_t *Transition_Flag (edict_t *ent, gitem_t *item);
 
 //p_view.c
@@ -320,6 +320,7 @@ typedef struct
 //bot info struct
 #define MAXBOTS 128
 #define MAXBOP 16
+#define MAXBOTXT 21
 
 // bot params
 #define BOP_WALK 0	   //flags
@@ -341,9 +342,9 @@ typedef struct
 
 typedef struct
 {
-	char netname[21];	     //netname
-	char model[21];		     //model
-	char skin[21];		     //skin
+	char netname[MAXBOTXT];	     //netname
+	char model[MAXBOTXT];	     //model
+	char skin[MAXBOTXT];	     //skin
 	int spflg;		     //spawned flag 0-not 1-waiting 2-spawned
 	int team;		     //team NO. 0-noteam 1-RED 2-BLUE
 	int arena;		     //if arena is on

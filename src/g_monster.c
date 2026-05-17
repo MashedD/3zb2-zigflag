@@ -575,7 +575,7 @@ enemy as activator.
 
 //============================================================================
 
-qboolean monster_start (edict_t *self)
+bool monster_start (edict_t *self)
 {
 	if (deathmatch->value )
 	{
@@ -634,8 +634,8 @@ void monster_start_go (edict_t *self)
 	// check for target to combat_point and change to combattarget
 	if (self->target)
 	{
-		qboolean	notcombat;
-		qboolean	fixup;
+		bool	notcombat;
+		bool	fixup;
 		edict_t		*target;
 
 		target = NULL;

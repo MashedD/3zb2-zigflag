@@ -36,6 +36,8 @@ void SaveStatsSnapshot (void)
 			e->frags[j] = cl->client->resp.frags[j];
 		e->damage_given = cl->client->resp.damage_given;
 		e->damage_recvd = cl->client->resp.damage_recvd;
+		e->frags[FLAG_EVENT].possession = cl->client->resp.possession;
+		e->frags[FLAG_EVENT].assassin = cl->client->resp.assassin;
 	}
 }
 
@@ -48,27 +50,32 @@ char *ClientTeam (edict_t *ent)
 {
 	char *p;
 	static char value[512];
+	const char *skin;
 
-	value[0] = 0;
+	value[0] = '\0';
 
-	if (!ent->client)
+	if (!ent || !ent->client)
 		return value;
 
-	strcpy(value, Info_ValueForKey(ent->client->pers.userinfo, "skin"));
+	skin = Info_ValueForKey(ent->client->pers.userinfo, "skin");
+	if (!skin)
+		return value;
+
+	snprintf(value, sizeof(value), "%s", skin);
+
 	p = strchr(value, '/');
 	if (!p)
 		return value;
 
 	if ((int)(dmflags->value) & DF_MODELTEAMS) {
-		*p = 0;
+		*p = '\0';
 		return value;
 	}
 
-	// if ((int)(dmflags->value) & DF_SKINTEAMS)
-	return ++p;
+	return p + 1;
 }
 
-qboolean OnSameTeam (edict_t *ent1, edict_t *ent2)
+bool OnSameTeam (edict_t *ent1, edict_t *ent2)
 {
 	char ent1Team[512];
 	char ent2Team[512];
@@ -82,11 +89,12 @@ qboolean OnSameTeam (edict_t *ent1, edict_t *ent2)
 	if (!((int)(dmflags->value) & (DF_MODELTEAMS | DF_SKINTEAMS)))
 		return false;
 
-	strcpy(ent1Team, ClientTeam(ent1));
-	strcpy(ent2Team, ClientTeam(ent2));
+	strlcpy(ent1Team, ClientTeam(ent1), sizeof(ent1Team));
+	strlcpy(ent2Team, ClientTeam(ent2), sizeof(ent2Team));
 
 	if (strcmp(ent1Team, ent2Team) == 0)
 		return true;
+
 	return false;
 }
 
@@ -191,7 +199,7 @@ void Cmd_Give_f (edict_t *ent)
 	gitem_t *it;
 	int index;
 	int i;
-	qboolean give_all;
+	bool give_all;
 	edict_t *it_ent;
 
 	if (deathmatch->value && !sv_cheats->value) {
@@ -483,12 +491,10 @@ void Cmd_Drop_f (edict_t *ent)
 		gi.cprintf(ent, PRINT_HIGH, "unknown item: %s\n", s);
 		return;
 	}
-
 	if (instagib && instagib->value && !Q_stricmp(it->pickup_name, "Slugs")) {
 		gi.cprintf(ent, PRINT_HIGH, "Can't drop slugs in instagib mode\n");
 		return;
 	}
-
 	if (!it->drop) {
 		gi.cprintf(ent, PRINT_HIGH, "Item is not dropable.\n");
 		return;
@@ -777,26 +783,13 @@ Cmd_PutAway_f
 */
 void Cmd_PutAway_f (edict_t *ent)
 {
-	if (ent->client->showscores) {
-		ent->client->showscores = false;
-		ent->client->update_chase = true;
-	}
-
-	if (ent->client->showhelp) {
-		ent->client->showhelp = false;
-		ent->client->update_chase = true;
-	}
-
-	if (ent->client->showinventory) {
-		ent->client->showinventory = false;
-		ent->client->update_chase = true;
-	}
-
+	ent->client->showscores = false;
+	ent->client->showhelp = false;
+	ent->client->showinventory = false;
 	//ZOID
-	if (ent->client->menu) {
+	if (ent->client->menu)
 		PMenu_Close(ent);
-		ent->client->update_chase = true;
-	}
+	ent->client->update_chase = true;
 	//ZOID
 }
 
@@ -934,7 +927,7 @@ void Cmd_Wave_f (edict_t *ent)
 Cmd_Say_f
 ==================
 */
-void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
+void Cmd_Say_f (edict_t *ent, bool team, bool arg0)
 {
 	int j;
 	edict_t *other;
@@ -1097,7 +1090,7 @@ void UndoChain (edict_t *ent, int step)
 Cmd_Stats_f
 =================
 */
-void Cmd_Stats_f (edict_t *ent, qboolean check_other)
+void Cmd_Stats_f (edict_t *ent, bool check_other)
 {
 	static const char *weapon_names[] = {
 		"Unknown", "Blaster", "Shotgun", "Super Shotgun", "Machinegun", "Chaingun", "Grenades", "Grenade Launcher", "Rocket Launcher", "HyperBlaster", "Railgun", "BFG10K"
@@ -1207,6 +1200,7 @@ void Cmd_Stats_f (edict_t *ent, qboolean check_other)
 	if (target->client->resp.damage_given > 0 || target->client->resp.damage_recvd > 0) {
 		gi.cprintf(ent, PRINT_HIGH, "\nDamage Given: %d  Received: %d\n", target->client->resp.damage_given, target->client->resp.damage_recvd);
 	}
+	CPRepeat(10, 2);
 }
 
 /*
@@ -1217,13 +1211,18 @@ Cmd_StatsAll_f
 void Cmd_StatsAll_f (edict_t *ent)
 {
 	int i, j, x;
+	char header[64], rowfmt[64];
 
 	// Helper macro: compute accuracy % from fragstat
 #define ACC(f, w) ((f)[w].atts > 0 ? (int)(((float)(f)[w].hits * 100.0f / (float)(f)[w].atts) + 0.5f) : 0)
 #define CAPV(v) ((v) > 100 ? 100 : (v))
 
-	gi.cprintf(ent, PRINT_HIGH, "\n%-9s %2s %3s %3s %3s %3s %3s %3s %3s %3s %3s %3s\n", "Name", "ki", "RA%", "CH%", "RL%", "MG%", "SG%", "SS%", "HB%", "GR%", "GL%", "BL%");
-	gi.cprintf(ent, PRINT_HIGH, "--------------------------------------------------\n");
+	Com_sprintf(header, sizeof(header), "\n%-9s %2s %3s %3s %3s %3s %3s %3s %3s %3s %3s %3s%s%s\n", "Name", "ki", "RA%", "CH%", "RL%", "MG%", "SG%", "SS%", "HB%", "GR%", "GL%", "BL%", zigmode->value ? " FAS" : "", zigmode->value ? " FBN" : "");
+
+	Com_sprintf(rowfmt, sizeof(rowfmt), "%%-9s %%2d %%3d %%3d %%3d %%3d %%3d %%3d %%3d %%3d %%3d %%3d%s%s\n", zigmode->value ? " %3d" : "", zigmode->value ? " %3d" : "");
+
+	gi.cprintf(ent, PRINT_HIGH, "%s", header);
+	CPRepeat(45, zigmode->value ? 60 : 52);
 
 	if (level.intermissiontime && num_cached_stats > 0) {
 		// Sort a local index array by kills (descending)
@@ -1256,11 +1255,15 @@ void Cmd_StatsAll_f (edict_t *ent)
 			strncpy(name, e->name, 9);
 			name[9] = '\0';
 
-			gi.cprintf(ent, PRINT_HIGH, "%-9s %2d %3d %3d %3d %3d %3d %3d %3d %3d %3d %3d\n", name, total_kills, CAPV(ACC(f, FRAG_RAILGUN)), CAPV(ACC(f, FRAG_CHAINGUN)), CAPV(ACC(f, FRAG_ROCKETLAUNCHER)), CAPV(ACC(f, FRAG_MACHINEGUN)), CAPV(ACC(f, FRAG_SHOTGUN)), CAPV(ACC(f, FRAG_SUPERSHOTGUN)), CAPV(ACC(f, FRAG_HYPERBLASTER)), CAPV(ACC(f, FRAG_GRENADES)), CAPV(ACC(f, FRAG_GRENADELAUNCHER)), CAPV(ACC(f, FRAG_BLASTER)));
+			if (zigmode->value)
+				gi.cprintf(ent, PRINT_HIGH, "%-9s %2d %3d %3d %3d %3d %3d %3d %3d %3d %3d %3d %3d %3d\n", name, total_kills, CAPV(ACC(f, FRAG_RAILGUN)), CAPV(ACC(f, FRAG_CHAINGUN)), CAPV(ACC(f, FRAG_ROCKETLAUNCHER)), CAPV(ACC(f, FRAG_MACHINEGUN)), CAPV(ACC(f, FRAG_SHOTGUN)), CAPV(ACC(f, FRAG_SUPERSHOTGUN)), CAPV(ACC(f, FRAG_HYPERBLASTER)), CAPV(ACC(f, FRAG_GRENADES)), CAPV(ACC(f, FRAG_GRENADELAUNCHER)), CAPV(ACC(f, FRAG_BLASTER)), f[FLAG_EVENT].assassin, f[FLAG_EVENT].possession);
+			else
+				gi.cprintf(ent, PRINT_HIGH, "%-9s %2d %3d %3d %3d %3d %3d %3d %3d %3d %3d %3d\n", name, total_kills, CAPV(ACC(f, FRAG_RAILGUN)), CAPV(ACC(f, FRAG_CHAINGUN)), CAPV(ACC(f, FRAG_ROCKETLAUNCHER)), CAPV(ACC(f, FRAG_MACHINEGUN)), CAPV(ACC(f, FRAG_SHOTGUN)), CAPV(ACC(f, FRAG_SUPERSHOTGUN)), CAPV(ACC(f, FRAG_HYPERBLASTER)), CAPV(ACC(f, FRAG_GRENADES)), CAPV(ACC(f, FRAG_GRENADELAUNCHER)), CAPV(ACC(f, FRAG_BLASTER)));
 		}
+		CPRepeat(10, 2);
 	} else {
 		// Live match: read directly from connected clients
-		edict_t *players[256];
+		edict_t *players[MAX_CLIENTS];
 		int num_players = 0;
 		for (i = 1; i <= game.maxclients; i++) {
 			if (g_edicts[i].inuse && g_edicts[i].client && g_edicts[i].client->pers.netname[0])
@@ -1291,8 +1294,12 @@ void Cmd_StatsAll_f (edict_t *ent)
 			strncpy(name, p->client->pers.netname, 9);
 			name[9] = '\0';
 
-			gi.cprintf(ent, PRINT_HIGH, "%-9s %2d %3d %3d %3d %3d %3d %3d %3d %3d %3d %3d\n", name, total_kills, CAPV(ACC(f, FRAG_RAILGUN)), CAPV(ACC(f, FRAG_CHAINGUN)), CAPV(ACC(f, FRAG_ROCKETLAUNCHER)), CAPV(ACC(f, FRAG_MACHINEGUN)), CAPV(ACC(f, FRAG_SHOTGUN)), CAPV(ACC(f, FRAG_SUPERSHOTGUN)), CAPV(ACC(f, FRAG_HYPERBLASTER)), CAPV(ACC(f, FRAG_GRENADES)), CAPV(ACC(f, FRAG_GRENADELAUNCHER)), CAPV(ACC(f, FRAG_BLASTER)));
+			if (zigmode->value)
+				gi.cprintf(ent, PRINT_HIGH, "%-9s %2d %3d %3d %3d %3d %3d %3d %3d %3d %3d %3d %3d %3d\n", name, total_kills, CAPV(ACC(f, FRAG_RAILGUN)), CAPV(ACC(f, FRAG_CHAINGUN)), CAPV(ACC(f, FRAG_ROCKETLAUNCHER)), CAPV(ACC(f, FRAG_MACHINEGUN)), CAPV(ACC(f, FRAG_SHOTGUN)), CAPV(ACC(f, FRAG_SUPERSHOTGUN)), CAPV(ACC(f, FRAG_HYPERBLASTER)), CAPV(ACC(f, FRAG_GRENADES)), CAPV(ACC(f, FRAG_GRENADELAUNCHER)), CAPV(ACC(f, FRAG_BLASTER)), p->client->resp.assassin, p->client->resp.possession);
+			else
+				gi.cprintf(ent, PRINT_HIGH, "%-9s %2d %3d %3d %3d %3d %3d %3d %3d %3d %3d %3d\n", name, total_kills, CAPV(ACC(f, FRAG_RAILGUN)), CAPV(ACC(f, FRAG_CHAINGUN)), CAPV(ACC(f, FRAG_ROCKETLAUNCHER)), CAPV(ACC(f, FRAG_MACHINEGUN)), CAPV(ACC(f, FRAG_SHOTGUN)), CAPV(ACC(f, FRAG_SUPERSHOTGUN)), CAPV(ACC(f, FRAG_HYPERBLASTER)), CAPV(ACC(f, FRAG_GRENADES)), CAPV(ACC(f, FRAG_GRENADELAUNCHER)), CAPV(ACC(f, FRAG_BLASTER)));
 		}
+		CPRepeat(10, 2);
 	}
 
 #undef ACC
@@ -1344,9 +1351,10 @@ void ClientCommand (edict_t *ent)
 	}
 
 	if (Q_stricmp(cmd, "store") == 0) {
-		Cmd_Store_f(ent);
+		Cmd_Store_f(ent, true);
 		return;
 	}
+
 	if (Q_stricmp(cmd, "recall") == 0) {
 		Cmd_Recall_f(ent);
 		return;
@@ -1424,13 +1432,14 @@ void ClientCommand (edict_t *ent)
 		Cmd_Say_f(ent, false, true);
 }
 
-void Cmd_Store_f (edict_t *ent)
+void Cmd_Store_f (edict_t *ent, bool verbose)
 {
 	if (!ent->client)
 		return;
 
 	if (!sv_cheats->value) {
-		gi.cprintf(ent, PRINT_HIGH, "Not allowed\n");
+		if (verbose)
+			gi.cprintf(ent, PRINT_HIGH, "Not allowed\n");
 		return;
 	}
 

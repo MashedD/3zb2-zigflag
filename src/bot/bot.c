@@ -24,7 +24,7 @@ edict_t *GetBotFlag2 () //チーム2の旗
 	return bot_team_flag2;
 }
 
-qboolean ChkTFlg (void)
+bool ChkTFlg (void)
 {
 	if (bot_team_flag1 != NULL && bot_team_flag2 != NULL)
 		return true;
@@ -55,7 +55,7 @@ void SpawnItem2 (edict_t *ent, gitem_t *item)
 // BOT用可視判定
 //
 
-qboolean Bot_trace (edict_t *ent, edict_t *other)
+bool Bot_trace (edict_t *ent, edict_t *other)
 {
 	trace_t rs_trace;
 	vec3_t ttx;
@@ -102,7 +102,7 @@ qboolean Bot_trace (edict_t *ent, edict_t *other)
 }
 
 
-qboolean Bot_traceX (edict_t *ent, edict_t *other)
+bool Bot_traceX (edict_t *ent, edict_t *other)
 {
 	trace_t rs_trace;
 	vec3_t ttx, tty;
@@ -117,7 +117,7 @@ qboolean Bot_traceX (edict_t *ent, edict_t *other)
 	return false;
 }
 
-qboolean Bot_traceY (edict_t *ent, edict_t *other)
+bool Bot_traceY (edict_t *ent, edict_t *other)
 {
 	trace_t rs_trace;
 	vec3_t ttx, tty;
@@ -140,7 +140,7 @@ qboolean Bot_traceY (edict_t *ent, edict_t *other)
 // BOT用可視判定 2
 //
 
-qboolean Bot_trace2 (edict_t *ent, vec3_t ttz)
+bool Bot_trace2 (edict_t *ent, vec3_t ttz)
 {
 	trace_t rs_trace;
 	vec3_t ttx;
@@ -160,7 +160,7 @@ qboolean Bot_trace2 (edict_t *ent, vec3_t ttz)
 // BOT用可視判定 3
 //
 
-qboolean Bot_traceS (edict_t *ent, edict_t *other)
+bool Bot_traceS (edict_t *ent, edict_t *other)
 {
 	trace_t rs_trace;
 	vec3_t start, end;

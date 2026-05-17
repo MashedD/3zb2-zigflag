@@ -2,7 +2,7 @@
 #include "../header/player.h"
 
 
-qboolean Get_YenPos (char *Buff, int *curr)
+bool Get_YenPos (char *Buff, int *curr)
 {
 	int i;
 
@@ -45,25 +45,25 @@ void Load_BotInfo ()
 	memset(ClientMessage, 0, sizeof(ClientMessage));
 	//set message section
 	if (!ctf->value && chedit->value)
-		strcpy(MessageSection, MESS_CHAIN_DM);
+		strlcpy(MessageSection, MESS_CHAIN_DM, sizeof(MessageSection));
 	else if (ctf->value && !chedit->value)
-		strcpy(MessageSection, MESS_CTF);
+		strlcpy(MessageSection, MESS_CTF, sizeof(MessageSection));
 	else if (ctf->value && chedit->value)
-		strcpy(MessageSection, MESS_CHAIN_CTF);
+		strlcpy(MessageSection, MESS_CHAIN_CTF, sizeof(MessageSection));
 	else
-		strcpy(MessageSection, MESS_DEATHMATCH);
+		strlcpy(MessageSection, MESS_DEATHMATCH, sizeof(MessageSection));
 
 	//init botlist
 	ListedBots = 0;
 	j = 1;
 	for (i = 0; i < MAXBOTS; i++) {
 		//netname
-		sprintf(Buff, "Zigock[%i]", i);
-		strcpy(Bot[i].netname, Buff);
+		snprintf(Buff, sizeof(Buff), "Zigock[%i]", i);
+		strlcpy(Bot[i].netname, Buff, MAXBOTXT);
 		//model
-		strcpy(Bot[i].model, "male");
+		strlcpy(Bot[i].model, "male", MAXBOTXT);
 		//skin
-		strcpy(Bot[i].model, "grunt");
+		strlcpy(Bot[i].model, "grunt", MAXBOTXT);
 
 		//param
 		Bot[i].param[BOP_WALK] = 0;
@@ -88,8 +88,7 @@ void Load_BotInfo ()
 	gamepath = gi.cvar("game", "0", CVAR_LATCH);
 
 	//load info
-	//sprintf(Buff,"%s/3ZBConfig.cfg",gamepath->string);
-	sprintf(Buff, "%s/%s/3zbconfig.cfg", GET_BASEPATH_STR(), gamepath->string);
+	snprintf(Buff, sizeof(Buff), "%s/%s/3zbconfig.cfg", GET_BASEPATH_STR(), gamepath->string);
 	fp = fopen(Buff, "rt");
 	if (fp == NULL) {
 		gi.dprintf("3ZB CFG: file not found: %s\n", Buff);
@@ -100,7 +99,7 @@ void Load_BotInfo ()
 		while (1) {
 			if (fgets(Buff, sizeof(Buff), fp) == NULL)
 				goto MESS_NOTFOUND;
-			if (!strncasecmp(MessageSection, Buff, strlen(MessageSection)))
+			if (!Q_strncasecmp(MessageSection, Buff, strlen(MessageSection)))
 				break;
 		}
 
@@ -116,26 +115,24 @@ void Load_BotInfo ()
 			strcat(ClientMessage, MessageHighlight);
 		}
 	MESS_NOTFOUND:
-		//if(botlist->string == NULL) strcpy(MessageSection,BOTLIST_SECTION_DM);
-		//else
-		sprintf(MessageSection, "[%s]", botlist->string);
+		snprintf(MessageSection, sizeof(MessageSection), "[%s]", botlist->string);
 		fseek(fp, 0, SEEK_SET); //先頭へ移動
 		while (1) {
 			if (fgets(Buff, sizeof(Buff), fp) == NULL) {
 				MessageSection[0] = 0;
 				break;
 			}
-			if (!strncasecmp(MessageSection, Buff, strlen(MessageSection)))
+			if (!Q_strncasecmp(MessageSection, Buff, strlen(MessageSection)))
 				break;
 		}
 		//when not found
 		if (MessageSection[0] == 0) {
-			strcpy(MessageSection, BOTLIST_SECTION_DM);
+			strlcpy(MessageSection, BOTLIST_SECTION_DM, sizeof(MessageSection));
 			fseek(fp, 0, SEEK_SET); //先頭へ移動
 			while (1) {
 				if (fgets(Buff, sizeof(Buff), fp) == NULL)
 					goto BOTLIST_NOTFOUND;
-				if (!strncasecmp(MessageSection, Buff, strlen(MessageSection)))
+				if (!Q_strncasecmp(MessageSection, Buff, strlen(MessageSection)))
 					break;
 			}
 		}
@@ -157,16 +154,16 @@ void Load_BotInfo ()
 				//netname
 				if (Get_YenPos(Buff, &k)) {
 					Buff[k] = 0;
-					if (strlen(&Buff[j]) < 21)
-						strcpy(Bot[i].netname, &Buff[j]);
+					if (strlen(&Buff[j]) < MAXBOTXT)
+						strlcpy(Bot[i].netname, &Buff[j], MAXBOTXT);
 					j = k + 1;
 				} else
 					break;
 				//model name
 				if (Get_YenPos(Buff, &k)) {
 					Buff[k] = 0;
-					if (strlen(&Buff[j]) < 21)
-						strcpy(Bot[i].model, &Buff[j]);
+					if (strlen(&Buff[j]) < MAXBOTXT)
+						strlcpy(Bot[i].model, &Buff[j], MAXBOTXT);
 					j = k + 1;
 					k++;
 				} else
@@ -174,8 +171,8 @@ void Load_BotInfo ()
 				//skin name
 				if (Get_YenPos(Buff, &k)) {
 					Buff[k] = 0;
-					if (strlen(&Buff[j]) < 21)
-						strcpy(Bot[i].skin, &Buff[j]);
+					if (strlen(&Buff[j]) < MAXBOTXT)
+						strlcpy(Bot[i].skin, &Buff[j], MAXBOTXT);
 					j = k + 1;
 					k++;
 				} else
@@ -373,7 +370,7 @@ void InitializeBot (edict_t *ent, int botindex)
 	client->resp.enterframe = level.framenum;
 
 	//set netname model skil and CTF team
-	sprintf(pinfo, "\\rate\\25000\\msg\\1\\fov\\90\\skin\\%s/%s\\name\\%s\\hand\\0", Bot[botindex].model, Bot[botindex].skin, Bot[botindex].netname);
+	snprintf(pinfo, sizeof(pinfo), "\\rate\\25000\\msg\\1\\fov\\90\\skin\\%s/%s\\name\\%s\\hand\\0", Bot[botindex].model, Bot[botindex].skin, Bot[botindex].netname);
 	ent->client->resp.ctf_team = Bot[botindex].team; //CTF_TEAM1,CTF_TEAM2
 	ent->svflags = SVF_MONSTER;
 
@@ -403,7 +400,7 @@ void InitializeBot (edict_t *ent, int botindex)
 		gi.bprintf(PRINT_HIGH, "%s entered the game\n", client->pers.netname);
 }
 
-static qboolean moveEntUntilNotStartsolid (edict_t *ent, int contentmask, float step_x, float step_y, float step_z, int max_steps)
+static bool moveEntUntilNotStartsolid (edict_t *ent, int contentmask, float step_x, float step_y, float step_z, int max_steps)
 {
 	trace_t trace;
 
@@ -438,16 +435,18 @@ void PutBotInServer (edict_t *ent)
 
 	if (instagib && instagib->value) {
 		item = FindItem("Railgun");
-		client->pers.selected_item = ITEM_INDEX(item);
-		client->pers.inventory[client->pers.selected_item] = 1;
-		client->pers.weapon = item;
+		if (!item)
+			gi.error("No Railgun item found");
 		client->pers.inventory[ITEM_INDEX(FindItem("Slugs"))] = 50;
 	} else {
-		item = Fdi_BLASTER; //FindItem("Blaster");
-		client->pers.selected_item = ITEM_INDEX(item);
-		client->pers.inventory[client->pers.selected_item] = 1;
-		client->pers.weapon = item;
+		item = FindItem("Blaster");
+		if (!item)
+			gi.error("No Blaster item found");
 	}
+
+	client->pers.selected_item = ITEM_INDEX(item);
+	client->pers.inventory[client->pers.selected_item] = 1;
+	client->pers.weapon = item;
 
 	client->silencer_shots = 0;
 	client->weaponstate = WEAPON_READY;
@@ -529,7 +528,7 @@ void PutBotInServer (edict_t *ent)
 
 	ent->svflags = SVF_MONSTER;
 
-	qboolean success = moveEntUntilNotStartsolid(ent, MASK_BOTSOLIDX, 0, 0, 1, 16); // try straight up first
+	bool success = moveEntUntilNotStartsolid(ent, MASK_BOTSOLIDX, 0, 0, 1, 16); // try straight up first
 	if (!success) {
 		vec3_t forward;
 
@@ -620,7 +619,7 @@ void PutBotInServer (edict_t *ent)
 //
 //----------------------------------------------------------------
 
-qboolean SpawnBot (int i)
+bool SpawnBot (int i)
 {
 	edict_t *bot, *ent;
 	int k, j;
@@ -804,7 +803,7 @@ void RemoveBot ()
 				else
 					Bot[botindex].spflg = BOT_SPRESERVED;
 
-				if (ctf->value && zigmode->value)
+				if (zigmode->value)
 					ZIGDeadDropFlag(e);
 
 				gi.bprintf(PRINT_HIGH, "%s disconnected\n", e->client->pers.netname);
@@ -940,7 +939,7 @@ void ZigockJoinMenu (edict_t *ent)
 	PMenu_Open(ent, zgjoinmenu, 4, sizeof(zgjoinmenu) / sizeof(pmenu_t));
 }
 
-qboolean ZigockStartClient (edict_t *ent)
+bool ZigockStartClient (edict_t *ent)
 {
 	if (ent->moveinfo.sound_end != CLS_NONE)
 		return false;

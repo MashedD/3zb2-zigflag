@@ -437,7 +437,7 @@ int CanUsewep (edict_t *ent, int weapon)
 //	Use BFG
 
 //------------------------------------------------------------
-qboolean B_UseBfg (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
+bool B_UseBfg (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
 {
 	int k, mywep;
 	zgcl_t *zc;
@@ -498,7 +498,7 @@ qboolean B_UseBfg (edict_t *ent, edict_t *target, int enewep, float aim, float d
 //	Use Hyper Blaster
 
 //------------------------------------------------------------
-qboolean B_UseHyperBlaster (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
+bool B_UseHyperBlaster (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
 {
 	int mywep;
 	gclient_t *client;
@@ -521,7 +521,7 @@ qboolean B_UseHyperBlaster (edict_t *ent, edict_t *target, int enewep, float aim
 //	Use Phalanx
 
 //------------------------------------------------------------
-qboolean B_UsePhalanx (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
+bool B_UsePhalanx (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
 {
 	int mywep;
 	zgcl_t *zc;
@@ -585,7 +585,7 @@ qboolean B_UsePhalanx (edict_t *ent, edict_t *target, int enewep, float aim, flo
 //	Use Rocket
 
 //------------------------------------------------------------
-qboolean B_UseRocket (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
+bool B_UseRocket (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
 {
 	int mywep;
 	zgcl_t *zc;
@@ -650,7 +650,7 @@ qboolean B_UseRocket (edict_t *ent, edict_t *target, int enewep, float aim, floa
 //	Use Boomer
 
 //------------------------------------------------------------
-qboolean B_UseBoomer (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
+bool B_UseBoomer (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
 {
 	int mywep;
 	gclient_t *client;
@@ -673,7 +673,7 @@ qboolean B_UseBoomer (edict_t *ent, edict_t *target, int enewep, float aim, floa
 //	Use Railgun
 
 //------------------------------------------------------------
-qboolean B_UseRailgun (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
+bool B_UseRailgun (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
 {
 	int mywep;
 	gclient_t *client;
@@ -696,7 +696,7 @@ qboolean B_UseRailgun (edict_t *ent, edict_t *target, int enewep, float aim, flo
 //	Use Grenade Launcher
 
 //------------------------------------------------------------
-qboolean B_UseGrenadeLauncher (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
+bool B_UseGrenadeLauncher (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
 {
 	int mywep;
 	zgcl_t *zc;
@@ -739,7 +739,7 @@ qboolean B_UseGrenadeLauncher (edict_t *ent, edict_t *target, int enewep, float 
 //	Use Chain Gun
 
 //------------------------------------------------------------
-qboolean B_UseChainGun (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
+bool B_UseChainGun (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
 {
 	int mywep;
 	gclient_t *client;
@@ -763,7 +763,7 @@ qboolean B_UseChainGun (edict_t *ent, edict_t *target, int enewep, float aim, fl
 //	Use Machine Gun
 
 //------------------------------------------------------------
-qboolean B_UseMachineGun (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
+bool B_UseMachineGun (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
 {
 	int k, mywep;
 	gclient_t *client;
@@ -787,7 +787,7 @@ qboolean B_UseMachineGun (edict_t *ent, edict_t *target, int enewep, float aim, 
 //	Use S-Shotgun
 
 //------------------------------------------------------------
-qboolean B_UseSuperShotgun (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
+bool B_UseSuperShotgun (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
 {
 	int mywep;
 	gclient_t *client;
@@ -810,7 +810,7 @@ qboolean B_UseSuperShotgun (edict_t *ent, edict_t *target, int enewep, float aim
 //	Use Shotgun
 
 //------------------------------------------------------------
-qboolean B_UseShotgun (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
+bool B_UseShotgun (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
 {
 	int mywep;
 	gclient_t *client;
@@ -833,7 +833,7 @@ qboolean B_UseShotgun (edict_t *ent, edict_t *target, int enewep, float aim, flo
 //	Use Hand Grenade
 
 //------------------------------------------------------------
-qboolean B_UseHandGrenade (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
+bool B_UseHandGrenade (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
 {
 	int mywep;
 	gclient_t *client;
@@ -857,7 +857,7 @@ qboolean B_UseHandGrenade (edict_t *ent, edict_t *target, int enewep, float aim,
 //	Use Trap
 
 //------------------------------------------------------------
-qboolean B_UseTrap (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
+bool B_UseTrap (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
 {
 	int mywep;
 	gclient_t *client;
@@ -882,7 +882,7 @@ qboolean B_UseTrap (edict_t *ent, edict_t *target, int enewep, float aim, float 
 //	Use Blaster
 
 //------------------------------------------------------------
-qboolean B_UseBlaster (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
+bool B_UseBlaster (edict_t *ent, edict_t *target, int enewep, float aim, float distance, int skill)
 {
 	int mywep;
 	gclient_t *client;
@@ -1024,7 +1024,7 @@ void Combat_Level0 (edict_t *ent, int foundedenemy, int enewep, float aim, float
 		rs_trace = gi.trace(vv, v1, v2, v, target, MASK_SHOT);
 
 		if (rs_trace.ent == ent) {
-			qboolean enemyFiring = (target->client->weaponstate == WEAPON_FIRING);
+			bool enemyFiring = (target->client->weaponstate == WEAPON_FIRING);
 			float dodgeChance = Bot[ent->client->zc.botindex].param[BOP_DODGE] / 10.0;
 
 			if (enemyFiring)
@@ -1325,7 +1325,7 @@ void Combat_Level0 (edict_t *ent, int foundedenemy, int enewep, float aim, float
 				f = -(f + 360);
 			}
 
-			qboolean enemyFiring = (target->client->weaponstate == WEAPON_FIRING);
+			bool enemyFiring = (target->client->weaponstate == WEAPON_FIRING);
 			float triggerAngle = 150;
 			float dodgeChance = Bot[zc->botindex].param[BOP_DODGE] / 10.0;
 
@@ -1783,7 +1783,7 @@ void UsePrimaryWeapon (edict_t *ent)
 void UpdateExplIndex (edict_t *ent)
 {
 	int i;
-	qboolean mod = false;
+	bool mod = false;
 
 	for (i = 0; i < MAX_EXPLINDEX; i++) {
 		if (ExplIndex[i] != NULL) {

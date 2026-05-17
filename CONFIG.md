@@ -71,10 +71,10 @@ Route chain files (`.chn`/`.chf`) contain object and level navigation data. See 
 
 ### Prerequisites
 
-- A writable route chain file in the correct directory. Create an empty file if starting fresh:
-  ```bash
-  touch 3zb2/chdtm/q2dm8.chn
-  touch 3zb2/chctf/q2ctf3.chf
+- Make sure your route chain directories are writable:
+  ```
+  3zb2/chdtm/
+  3zb2/chctf/
   ```
 
 ### Steps
@@ -106,7 +106,7 @@ Route chain files (`.chn`/`.chf`) contain object and level navigation data. See 
 ### Tips
 
 - Avoid rocket jumps and grenade jumps in routes.
-- Deaths (lava, slime, etc.) auto-correct routes to safe paths.
+- Deaths (_lava, slime, etc._) auto-correct routes to safe paths.
 - Manually remove stuck bots: `sv rmb 1`
 
 ## Map List
@@ -230,6 +230,8 @@ Automatically spawn bots on match start.
 | `DF_SKINTEAMS` | `64` |
 | `DF_MODELTEAMS` | `128` |
 | `DF_NO_FRIENDLY_FIRE` | `256` |
+
+:point_right: [DMFlag Calculator](https://DirtBagXon.github.io/3zb2-zigflag/dmcalc.html)
 
 ### Capture and Hold (ZigFlag)
 

@@ -4,15 +4,15 @@
 #include "../header/player.h"
 #include "../header/bot.h"
 
-qboolean is_quad;
+bool is_quad;
 // RAFAEL
-static qboolean is_quadfire;
+static bool is_quadfire;
 static byte is_silenced;
 
 
-void weapon_grenade_fire (edict_t *ent, qboolean held);
+void weapon_grenade_fire (edict_t *ent, bool held);
 // RAFAEL
-void weapon_trap_fire (edict_t *ent, qboolean held);
+void weapon_trap_fire (edict_t *ent, bool held);
 
 void P_ProjectSource (edict_t *ent, vec3_t distance, vec3_t forward, vec3_t right, vec3_t result)
 {
@@ -108,7 +108,7 @@ void PlayerNoise (edict_t *who, vec3_t where, int type)
 }
 
 void ShowGun (edict_t *ent);
-qboolean Pickup_Weapon (edict_t *ent, edict_t *other)
+bool Pickup_Weapon (edict_t *ent, edict_t *other)
 {
 	int index, i, j;
 	gitem_t *ammo, *item;
@@ -665,7 +665,7 @@ GRENADE
 #define GRENADE_MINSPEED 400
 #define GRENADE_MAXSPEED 800
 
-void weapon_grenade_fire (edict_t *ent, qboolean held)
+void weapon_grenade_fire (edict_t *ent, bool held)
 {
 	vec3_t offset;
 	vec3_t forward, right;
@@ -1040,7 +1040,7 @@ BLASTER / HYPERBLASTER
 ======================================================================
 */
 
-void Blaster_Fire (edict_t *ent, vec3_t g_offset, int damage, qboolean hyper, int effect)
+void Blaster_Fire (edict_t *ent, vec3_t g_offset, int damage, bool hyper, int effect)
 {
 	vec3_t forward, right;
 	vec3_t start;
@@ -1607,7 +1607,6 @@ void weapon_supershotgun_fire (edict_t *ent)
 	v[YAW] = ent->client->v_angle[YAW] - 5;
 	v[ROLL] = ent->client->v_angle[ROLL];
 	AngleVectors(v, forward, NULL, NULL);
-
 	if (aimfix->value) {
 		AngleVectors(v, forward, right, NULL);
 
@@ -1617,12 +1616,9 @@ void weapon_supershotgun_fire (edict_t *ent)
 		VectorSet(offset, 0, 8, ent->viewheight - 8);
 		P_ProjectSource(ent, offset, forward, right, start);
 	}
-
 	fire_shotgun(ent, start, forward, damage, kick, DEFAULT_SHOTGUN_HSPREAD, DEFAULT_SHOTGUN_VSPREAD, DEFAULT_SSHOTGUN_COUNT / 2, MOD_SSHOTGUN);
-
 	v[YAW] = ent->client->v_angle[YAW] + 5;
 	AngleVectors(v, forward, NULL, NULL);
-
 	if (aimfix->value) {
 		AngleVectors(v, forward, right, NULL);
 
@@ -1632,7 +1628,6 @@ void weapon_supershotgun_fire (edict_t *ent)
 		VectorSet(offset, 0, 8, ent->viewheight - 8);
 		P_ProjectSource(ent, offset, forward, right, start);
 	}
-
 	fire_shotgun(ent, start, forward, damage, kick, DEFAULT_SHOTGUN_HSPREAD, DEFAULT_SHOTGUN_VSPREAD, DEFAULT_SSHOTGUN_COUNT / 2, MOD_SSHOTGUN);
 	ent->client->resp.frags[FRAG_SUPERSHOTGUN].atts++;
 
@@ -2076,7 +2071,7 @@ TRAP
 #define TRAP_MINSPEED 300
 #define TRAP_MAXSPEED 700
 
-void weapon_trap_fire (edict_t *ent, qboolean held)
+void weapon_trap_fire (edict_t *ent, bool held)
 {
 	vec3_t offset;
 	vec3_t forward, right;

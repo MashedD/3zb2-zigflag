@@ -159,7 +159,7 @@ void player_pain (edict_t *self, edict_t *other, float kick, int damage)
 }
 
 
-qboolean IsFemale (edict_t *ent)
+bool IsFemale (edict_t *ent)
 {
 	char *info;
 
@@ -238,16 +238,16 @@ static char *announcer_snd[] = {
 
 void Announcer_Message (edict_t *ent, int streak)
 {
-	if (ENT_IS_BOT(ent) || !announcer->value)
+	if (streak > 7)
 		return;
 
 	int idx = streak - 2;
-	if (idx >= 0) {
-		if (idx > 5)
-			idx = 5;
-		gi.centerprintf(ent, "%s", announcer_msgs[idx]);
-		gi.sound(ent, CHAN_VOICE, gi.soundindex(announcer_snd[idx]), 1, ATTN_NORM, 0);
-	}
+
+	if (idx < 0)
+		return;
+
+	gi.centerprintf(ent, "%s", announcer_msgs[idx]);
+	gi.sound(ent, CHAN_AUTO, gi.soundindex(announcer_snd[idx]), 1, ATTN_NORM, 0);
 }
 
 void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
@@ -255,14 +255,13 @@ void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
 	int mod = meansOfDeath & ~MOD_FRIENDLY_FIRE;
 	char *message;
 	char *message2;
-	qboolean ff, fk;
+	bool ff, fk;
 
 	if (coop->value && attacker->client)
 		meansOfDeath |= MOD_FRIENDLY_FIRE;
 
 	if (deathmatch->value || coop->value) {
 		ff = meansOfDeath & MOD_FRIENDLY_FIRE;
-		mod = meansOfDeath & ~MOD_FRIENDLY_FIRE;
 		message = NULL;
 		message2 = "";
 		fk = false;
@@ -453,7 +452,7 @@ void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
 					//PONKO
 			}
 			if (message) {
-				if (ctf->value && zigmode->value && zigkiller->value) {
+				if (zigmode->value && zigkiller->value) {
 					if (attacker->flagholder && attacker->flagholder == self) {
 						if (ff && OnSameTeam(self, attacker)) {
 							if (rand() & 1)
@@ -494,8 +493,13 @@ void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
 							attacker->client->resp.kill_streak = 1;
 						attacker->client->resp.kill_streak_time = now;
 
-						if (attacker->client->resp.kill_streak >= 2)
-							Announcer_Message(attacker, attacker->client->resp.kill_streak);
+						if (attacker->client->resp.kill_streak >= 2) {
+							attacker->client->resp.pending_kill_streak =
+							  attacker->client->resp.kill_streak;
+
+							attacker->client->resp.pending_kill_streak_time =
+							  level.time + 0.5f;
+						}
 					}
 					self->client->resp.frags[mod_to_frag[mod & 63]].deaths++;
 				}
@@ -518,9 +522,9 @@ void TossClientWeapon (edict_t *self)
 {
 	gitem_t *item;
 	edict_t *drop;
-	qboolean quad;
+	bool quad;
 	// RAFAEL
-	qboolean quadfire;
+	bool quadfire;
 	float dist;
 	vec3_t v;
 	edict_t *enemy = NULL;
@@ -781,6 +785,8 @@ void InitClientPersistant (gclient_t *client)
 	//test
 	if (instagib && instagib->value) {
 		item = FindItem("Railgun");
+		if (!item)
+			gi.error("No Railgun item found");
 		client->pers.selected_item = ITEM_INDEX(item);
 		client->pers.inventory[client->pers.selected_item] = 1;
 
@@ -788,7 +794,9 @@ void InitClientPersistant (gclient_t *client)
 		client->pers.lastweapon = item;
 		client->pers.inventory[ITEM_INDEX(FindItem("Slugs"))] = 50;
 	} else {
-		item = /*Fdi_BLASTER;//*/ FindItem("Blaster");
+		item = FindItem("Blaster");
+		if (!item)
+			gi.error("No Blaster item found");
 		client->pers.selected_item = ITEM_INDEX(item);
 		client->pers.inventory[client->pers.selected_item] = 1;
 
@@ -881,13 +889,6 @@ void FetchClientEntData (edict_t *ent)
 	if (coop->value)
 		ent->client->resp.score = ent->client->pers.score;
 }
-
-void StoreFlagData (edict_t *ent)
-{
-	ent->possession = ent->client->resp.possession;
-	ent->assassin = ent->client->resp.assassin;
-}
-
 
 /*
 =======================================================================
@@ -1082,8 +1083,7 @@ edict_t *SelectFarthestDeathmatchSpawnPoint (void)
 
 edict_t *SelectDeathmatchSpawnPoint (void)
 {
-	int i;
-	for (i = 1; i <= maxclients->value; i++) {
+	for (int i = 1; i <= maxclients->value; i++) {
 		if (g_edicts[i].inuse && g_edicts[i].health > 0) {
 			if ((int)(dmflags->value) & DF_SPAWN_FARTHEST)
 				return SelectFarthestDeathmatchSpawnPoint();
@@ -1311,7 +1311,7 @@ void respawn (edict_t *self)
 
 		self->client->respawn_time = level.time;
 
-		Cmd_Store_f(self);
+		Cmd_Store_f(self, false);
 		return;
 	}
 
@@ -1504,9 +1504,6 @@ void PutClientInServer (edict_t *ent)
 	// copy some data from the client to the entity
 	FetchClientEntData(ent);
 
-	// store new scoreboard data over the level
-	StoreFlagData(ent);
-
 	// clear entity values
 	ent->groundentity = NULL;
 	ent->client = &game.clients[index];
@@ -1607,10 +1604,6 @@ void PutClientInServer (edict_t *ent)
 			return;
 	}*/
 	//ponpoko
-
-	// restore scoreboard data
-	ent->client->resp.possession = ent->possession;
-	ent->client->resp.assassin = ent->assassin;
 
 	// we must link before killbox since it uses absmin/absmax
 	if (fixflaws->value)
@@ -1779,7 +1772,7 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo)
 
 	// check for malformed or illegal info strings
 	if (!Info_Validate(userinfo)) {
-		strcpy(userinfo, "\\name\\badinfo\\skin\\male/grunt");
+		strlcpy(userinfo, "\\name\\badinfo\\skin\\male/grunt", MAX_INFO_STRING);
 	}
 
 	// set name
@@ -1792,7 +1785,7 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo)
 		ClearClientBotTag(name, name_buf, sizeof(name_buf));
 
 		if (strlen(name_buf) < 1) {
-			strcpy(name_buf, SEDATIVE);
+			strlcpy(name_buf, SEDATIVE, sizeof(ent->client->pers.netname));
 			gi.dprintf("%s Alert...\n", name_buf);
 		}
 		name = name_buf;
@@ -1848,7 +1841,7 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo)
 	}
 
 	// save off the userinfo in case we want to check something later
-	strncpy(ent->client->pers.userinfo, userinfo, sizeof(ent->client->pers.userinfo) - 1);
+	strlcpy(ent->client->pers.userinfo, userinfo, sizeof(ent->client->pers.userinfo));
 }
 
 
@@ -1864,7 +1857,7 @@ Changing levels will NOT cause this to be called again, but
 loadgames will.
 ============
 */
-qboolean ClientConnect (edict_t *ent, char *userinfo)
+bool ClientConnect (edict_t *ent, char *userinfo)
 {
 	char *value;
 
@@ -1959,7 +1952,7 @@ void ClientDisconnect (edict_t *ent)
 	CTFDeadDropTech(ent);
 	//ZOID
 
-	if (ctf->value && zigmode->value)
+	if (zigmode->value)
 		ZIGDeadDropFlag(ent);
 
 	// send effect
@@ -2061,11 +2054,11 @@ void ChainPodThink (edict_t *ent)
 	}
 	ent->nextthink = level.time + FRAMETIME * 10;
 }
-qboolean Bot_traceX (edict_t *ent, edict_t *other);
-qboolean ChkTFlg ();
+bool Bot_traceX (edict_t *ent, edict_t *other);
+bool ChkTFlg ();
 
 
-qboolean TraceX (edict_t *ent, vec3_t p2)
+bool TraceX (edict_t *ent, vec3_t p2)
 {
 	trace_t rs_trace;
 	vec3_t v1, v2;
@@ -2130,7 +2123,7 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 	trace_t rs_trace;
 
 	static edict_t *old_ground;
-	static qboolean wasground;
+	static bool wasground;
 
 	impulse = ucmd->impulse;
 
@@ -2389,10 +2382,7 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 	//--------------------------------------
 	level.current_entity = ent;
 	client = ent->client;
-	float delay = 5.0;
-
-	if (ctf->value && zigmode->value)
-		delay = 7.5;
+	float delay = 8;
 
 	if (level.intermissiontime) {
 		client->ps.pmove.pm_type = PM_FREEZE;
@@ -2587,6 +2577,29 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 	}
 }
 
+/*
+==============
+CheckKillAnnouncer
+
+No overlapping announcements
+==============
+*/
+void CheckKillAnnouncer (edict_t *ent)
+{
+	if (ENT_IS_BOT(ent) || !ent->client)
+		return;
+
+	if (ent->client->resp.pending_kill_streak < 2)
+		return;
+
+	if (level.time >= ent->client->resp.pending_kill_streak_time) {
+		Announcer_Message(ent, ent->client->resp.pending_kill_streak);
+
+		ent->client->resp.pending_kill_streak = 0;
+		ent->client->resp.pending_kill_streak_time = 0;
+	}
+}
+
 
 /*
 ==============
@@ -2604,6 +2617,9 @@ void ClientBeginServerFrame (edict_t *ent)
 		return;
 
 	client = ent->client;
+
+	if (announcer->value)
+		CheckKillAnnouncer(ent);
 
 	if (deathmatch->value &&
 	    client->pers.spectator != client->resp.spectator &&

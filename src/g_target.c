@@ -97,9 +97,9 @@ void SP_target_speaker (edict_t *ent)
 void Use_Target_Help (edict_t *ent, edict_t *other, edict_t *activator)
 {
 	if (ent->spawnflags & 1)
-		strncpy(game.helpmessage1, ent->message, sizeof(game.helpmessage2) - 1);
+		strlcpy(game.helpmessage1, ent->message, sizeof(game.helpmessage2));
 	else
-		strncpy(game.helpmessage2, ent->message, sizeof(game.helpmessage1) - 1);
+		strlcpy(game.helpmessage2, ent->message, sizeof(game.helpmessage1));
 
 	game.helpchanged++;
 }

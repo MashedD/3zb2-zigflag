@@ -548,8 +548,8 @@ P_WorldEffects
 */
 void P_WorldEffects (void)
 {
-	qboolean breather;
-	qboolean envirosuit;
+	bool breather;
+	bool envirosuit;
 	int waterlevel, old_waterlevel;
 
 	if (current_player->movetype == MOVETYPE_NOCLIP) {
@@ -818,7 +818,7 @@ void G_SetClientSound (edict_t *ent)
 	if (ent->s.sound == 0 && ent->client->pers.inventory[ITEM_INDEX(zflag_item)] && !ent->waterlevel) {
 		if (ent->client->resp.flagsound > 80) {
 			static int r;
-			static qboolean rs = true;
+			static bool rs = true;
 
 			if (rs) {
 				r = rand() % 4;
@@ -847,7 +847,7 @@ G_SetClientFrame
 void G_SetClientFrame (edict_t *ent)
 {
 	gclient_t *client;
-	qboolean duck, run;
+	bool duck, run;
 
 	if (ent->s.modelindex != 255)
 		return; // not in the player model
@@ -1063,7 +1063,7 @@ void ClientEndServerFrame (edict_t *ent)
 	if (ent->client->showscores && !(level.framenum & 31) && !(ent->svflags & SVF_MONSTER)) {
 		if (ent->client->menu)
 			PMenu_Update(ent);
-		else if (ctf->value && zigmode->value)
+		else if (zigmode->value)
 			DeathmatchScoreboardMessage(ent, ent->flagholder);
 		else
 			DeathmatchScoreboardMessage(ent, ent->enemy);
@@ -1085,8 +1085,8 @@ B_WorldEffects
 */
 void B_WorldEffects (edict_t *ent)
 {
-	qboolean breather;
-	qboolean envirosuit;
+	bool breather;
+	bool envirosuit;
 	int waterlevel, old_waterlevel;
 	gclient_t *client;
 

@@ -245,13 +245,20 @@ void InitGame (void)
 	game.clients = gi.TagMalloc(game.maxclients * sizeof(game.clients[0]), TAG_GAME);
 	globals.num_edicts = game.maxclients + 1;
 
+	if (zigintro->value && !zigmode->value)
+		zigintro->value = 0;
+
 	//ZOID
 	CTFInit();
-	if (!ctf->value && zigmode->value) {
-		gi.dprintf("zigmode requires CTF; disabling.\n");
-		gi.cvar_set("zigmode", "0");
-		zigmode->value = 0;
+
+	if (ctf->value && zigmode->value) {
+		gi.dprintf("zigmode requires CTF/TDM disabled.\n");
+		gi.cvar_set("ctf", "0");
+		gi.cvar_set("tdm", "0");
+		ctf->value = 0;
+		tdm->value = 0;
 	}
+
 	//ZOID
 	Load_BotInfo(); //コンフィグ読み込み3ZBConfig.cfg
 }
@@ -348,7 +355,8 @@ void ReadField (FILE *f, field_t *field, byte *base)
 				*(char **)p = NULL;
 			else {
 				*(char **)p = gi.TagMalloc(len, TAG_LEVEL);
-				fread(*(char **)p, len, 1, f);
+				if (fread(*(char **)p, len, 1, f) != 1)
+					gi.error("Error reading level string of length %d\n", len);
 			}
 			break;
 		case F_GSTRING:
@@ -357,7 +365,8 @@ void ReadField (FILE *f, field_t *field, byte *base)
 				*(char **)p = NULL;
 			else {
 				*(char **)p = gi.TagMalloc(len, TAG_GAME);
-				fread(*(char **)p, len, 1, f);
+				if (fread(*(char **)p, len, 1, f) != 1)
+					gi.error("Error reading game string of length %d\n", len);
 			}
 			break;
 		case F_EDICT:
@@ -429,7 +438,8 @@ void ReadClient (FILE *f, gclient_t *client)
 {
 	field_t *field;
 
-	fread(client, sizeof(*client), 1, f);
+	if (fread(client, sizeof(*client), 1, f) != 1)
+		gi.error("Error reading gclient_t structure from file\n");
 
 	for (field = clientfields; field->name; field++) {
 		ReadField(f, field, (byte *)client);
@@ -450,7 +460,7 @@ A single player death will automatically restore from the
 last save position.
 ============
 */
-void WriteGame (char *filename, qboolean autosave)
+void WriteGame (char *filename, bool autosave)
 {
 	FILE *f;
 	int i;
@@ -464,7 +474,7 @@ void WriteGame (char *filename, qboolean autosave)
 		gi.error("Couldn't open %s", filename);
 
 	memset(str, 0, sizeof(str));
-	strcpy(str, __DATE__);
+	strlcpy(str, __DATE__, sizeof(str));
 	fwrite(str, sizeof(str), 1, f);
 
 	game.autosaved = autosave;
@@ -480,7 +490,6 @@ void WriteGame (char *filename, qboolean autosave)
 void ReadGame (char *filename)
 {
 	FILE *f;
-	int i;
 	char str[16];
 
 	gi.FreeTags(TAG_GAME);
@@ -489,7 +498,9 @@ void ReadGame (char *filename)
 	if (!f)
 		gi.error("Couldn't open %s", filename);
 
-	fread(str, sizeof(str), 1, f);
+	if (fread(str, sizeof(str), 1, f) != 1)
+		gi.error("Failed to read savegame header from %s\n", filename);
+
 	if (strcmp(str, __DATE__)) {
 		fclose(f);
 		gi.error("Savegame from an older version.\n");
@@ -498,9 +509,11 @@ void ReadGame (char *filename)
 	g_edicts = gi.TagMalloc(game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
 	globals.edicts = g_edicts;
 
-	fread(&game, sizeof(game), 1, f);
+	if (fread(&game, sizeof(game), 1, f) != 1)
+		gi.error("Failed to read game state from %s\n", filename);
+
 	game.clients = gi.TagMalloc(game.maxclients * sizeof(game.clients[0]), TAG_GAME);
-	for (i = 0; i < game.maxclients; i++)
+	for (int i = 0; i < game.maxclients; i++)
 		ReadClient(f, &game.clients[i]);
 
 	fclose(f);
@@ -579,7 +592,8 @@ void ReadEdict (FILE *f, edict_t *ent)
 {
 	field_t *field;
 
-	fread(ent, sizeof(*ent), 1, f);
+	if (fread(ent, sizeof(*ent), 1, f) != 1)
+		gi.error("Error reading edict_t structure from file\n");
 
 	for (field = savefields; field->name; field++) {
 		ReadField(f, field, (byte *)ent);
@@ -597,7 +611,8 @@ void ReadLevelLocals (FILE *f)
 {
 	field_t *field;
 
-	fread(&level, sizeof(level), 1, f);
+	if (fread(&level, sizeof(level), 1, f) != 1)
+		gi.error("Error reading level structure from file\n");
 
 	for (field = levelfields; field->name; field++) {
 		ReadField(f, field, (byte *)&level);
@@ -684,14 +699,18 @@ void ReadLevel (char *filename)
 	globals.num_edicts = maxclients->value + 1;
 
 	// check edict size
-	fread(&i, sizeof(i), 1, f);
+	if (fread(&i, sizeof(i), 1, f) != 1)
+		gi.error("ReadLevel: failed to read edict size");
+
 	if (i != sizeof(edict_t)) {
 		fclose(f);
 		gi.error("ReadLevel: mismatched edict size");
 	}
 
 	// check function pointer base address
-	fread(&base, sizeof(base), 1, f);
+	if (fread(&base, sizeof(base), 1, f) != 1)
+		gi.error("ReadLevel: failed to read function pointer base");
+
 	if (base != (void *)InitGame) {
 		fclose(f);
 		gi.error("ReadLevel: function pointers have moved");

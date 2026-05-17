@@ -15,7 +15,7 @@ is not a staircase.
 */
 int c_yes, c_no;
 
-qboolean M_CheckBottom (edict_t *ent)
+bool M_CheckBottom (edict_t *ent)
 {
 	vec3_t mins, maxs, start, stop;
 	trace_t trace;

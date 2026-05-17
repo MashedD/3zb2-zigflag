@@ -78,17 +78,16 @@ cvar_t *spawnbotfar;
 cvar_t *respawn_protection;
 cvar_t *g_sticky_grenades;
 cvar_t *g_crouching;
-int flagbounce;
 float spawncycle;
 float ctfjob_update;
 //ponpoko
 
 void SpawnEntities (char *mapname, char *entities, char *spawnpoint);
 void ClientThink (edict_t *ent, usercmd_t *cmd);
-qboolean ClientConnect (edict_t *ent, char *userinfo, qboolean loadgame);
+bool ClientConnect (edict_t *ent, char *userinfo, bool loadgame);
 void ClientUserinfoChanged (edict_t *ent, char *userinfo);
 void ClientDisconnect (edict_t *ent);
-void ClientBegin (edict_t *ent, qboolean loadgame);
+void ClientBegin (edict_t *ent, bool loadgame);
 void ClientCommand (edict_t *ent);
 void RunEntity (edict_t *ent);
 void WriteGame (char *filename);
@@ -101,7 +100,7 @@ void G_RunFrame (void);
 void SetBotFlag1 (edict_t *ent); //チーム1の旗
 void SetBotFlag2 (edict_t *ent); //チーム2の旗
 void Flag_Msg (char *response, size_t length);
-qboolean KillerFlagCheck (edict_t *ent);
+bool KillerFlagCheck (edict_t *ent);
 
 //===================================================================
 
@@ -221,7 +220,7 @@ get next map's file name
 void Get_NextMap ()
 {
 	FILE *fp;
-	qboolean firstflag = false;
+	bool firstflag = false;
 	char Buff[MAX_QPATH];
 	char top[MAX_QPATH];
 	char nextmap[MAX_QPATH];
@@ -230,8 +229,7 @@ void Get_NextMap ()
 	if (!maplist->string)
 		return;
 
-	//sprintf(Buff,".\\%s\\3ZBMAPS.LST",gamepath->string);
-	sprintf(Buff, "%s/%s/3zbmaps.lst", GET_BASEPATH_STR(), gamepath->string);
+	snprintf(Buff, sizeof(Buff), "%s/%s/3zbmaps.lst", GET_BASEPATH_STR(), gamepath->string);
 	fp = fopen(Buff, "r");
 	if (fp == NULL)
 		return;
@@ -269,7 +267,7 @@ void Get_NextMap ()
 
 		if (Buff[0] == '[') {
 			if (firstflag) {
-				strcpy(nextmap, top);
+				strlcpy(nextmap, top, MAX_QPATH);
 				goto SETNEXTMAP;
 			} else
 				goto NONEXTMAP;
@@ -282,7 +280,7 @@ void Get_NextMap ()
 
 		if (!firstflag) {
 			firstflag = true;
-			strcpy(top, nextmap);
+			strlcpy(top, nextmap, MAX_QPATH);
 		}
 
 		if (Q_stricmp(level.mapname, nextmap) == 0)
@@ -293,7 +291,7 @@ void Get_NextMap ()
 	while (1) {
 		if (fgets(Buff, sizeof(Buff), fp) == NULL) {
 			if (firstflag) {
-				strcpy(nextmap, top);
+				strlcpy(nextmap, top, MAX_QPATH);
 				goto SETNEXTMAP;
 			} else
 				goto NONEXTMAP;
@@ -301,7 +299,7 @@ void Get_NextMap ()
 
 		if (Buff[0] == '[') {
 			if (firstflag) {
-				strcpy(nextmap, top);
+				strlcpy(nextmap, top, MAX_QPATH);
 				goto SETNEXTMAP;
 			} else
 				goto NONEXTMAP;
@@ -315,7 +313,7 @@ void Get_NextMap ()
 	}
 SETNEXTMAP:
 
-	strcpy(level.nextmap, nextmap);
+	strlcpy(level.nextmap, nextmap, MAX_QPATH);
 
 NONEXTMAP:
 	fclose(fp);
@@ -481,10 +479,9 @@ void G_RunFrame (void)
 {
 	int i, j;
 	static unsigned short zflag_stall = 0;
-	static unsigned short zflag_bounce = 0;
 	static float next_fragadd = 0;
-	static qboolean zf_warn = false;
-	static qboolean zf_move = false;
+	static bool zf_warn = false;
+	static bool zf_move = false;
 	static edict_t *flagholder = NULL;
 	static edict_t *lastholder = NULL;
 	char buffer[MAX_TEXT];
@@ -492,7 +489,7 @@ void G_RunFrame (void)
 	edict_t *ent;
 
 	vec3_t v, vv;
-	qboolean haveflag;
+	bool haveflag;
 
 	level.framenum++;
 	level.time = level.framenum * FRAMETIME;
@@ -513,7 +510,6 @@ void G_RunFrame (void)
 		flagholder = NULL;
 		lastholder = NULL;
 		zflag_stall = 0;
-		zflag_bounce = 0;
 		zf_warn = false;
 		zf_move = false;
 		return;
@@ -567,7 +563,7 @@ void G_RunFrame (void)
 			}
 		}
 		//////////旗のスコアチェック
-		if (zigmode->value == 1 && !ctf->value) {
+		if (zigmode->value && !ctf->value) {
 			if (i > 0 && i <= maxclients->value) {
 				if (g_edicts[i].client) {
 					if (combathud->value && (level.framenum & 8) && !ENT_IS_BOT(ent))
@@ -656,12 +652,12 @@ void G_RunFrame (void)
 		flagholder = NULL;
 
 	if (next_fragadd < level.time) {
-		if (!flagholder && !ctf->value && zigmode->value == 1 && zigspawn->value == 1) {
+		if (!flagholder && !ctf->value && zigmode->value && zigspawn->value) {
 			zflag_stall++;
 
 			if (zflag_stall == (ZIGRESET - 1)) {
 				zf_warn = true;
-				sprintf(buffer, "Flag will bounce in %d seconds\n", (int)(FRAMETIME * ZIGTICK));
+				snprintf(buffer, sizeof(buffer), "Flag will bounce in %d seconds\n", (int)(FRAMETIME * ZIGTICK));
 				HighlightStr(hitxt, buffer, MAX_TEXT);
 				gi.bprintf(PRINT_HIGH, "%s", hitxt);
 			}
@@ -681,18 +677,16 @@ void G_RunFrame (void)
 				}
 				zf_move = true;
 				zflag_stall = 0;
-				zflag_bounce++;
 				SelectFlagSpawnPoint(ent, v, vv);
 				ZIGBounce_Flag(ent, zflag_item);
 				VectorCopy(v, zflag_ent->s.origin);
-				flagbounce = zflag_bounce;
 				zflag_ent->solid = SOLID_TRIGGER;
 				HighlightStr(hitxt, "Flag bounced\n", MAX_TEXT);
 				gi.bprintf(PRINT_HIGH, "%s", hitxt);
 			}
 		}
 
-		if (!zigspawn->value && zflag_ent == NULL && !haveflag && !ctf->value && zigmode->value == 1 && zigflag_spawn == 1) {
+		if (!zigspawn->value && zflag_ent == NULL && !haveflag && !ctf->value && zigmode->value && zigflag_spawn) {
 			SelectFlagSpawnPoint(ent, v, vv);
 			if (ZIGDrop_FlagCheck(ent, zflag_item)) {
 				VectorCopy(v, zflag_ent->s.origin);

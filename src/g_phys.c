@@ -67,7 +67,7 @@ SV_RunThink
 Runs thinking code for this frame if necessary
 =============
 */
-qboolean SV_RunThink (edict_t *ent)
+bool SV_RunThink (edict_t *ent)
 {
 	float thinktime;
 
@@ -400,7 +400,7 @@ Objects need to be moved back on a failed push,
 otherwise riders would continue to slide.
 ============
 */
-qboolean SV_Push (edict_t *pusher, vec3_t move, vec3_t amove)
+bool SV_Push (edict_t *pusher, vec3_t move, vec3_t amove)
 {
 	int i, e;
 	edict_t *check, *block;
@@ -657,11 +657,11 @@ void SV_Physics_Toss (edict_t *ent)
 	vec3_t move;
 	float backoff;
 	edict_t *slave;
-	qboolean wasinwater;
-	qboolean isinwater;
+	bool wasinwater;
+	bool isinwater;
 	vec3_t old_origin;
 
-	qboolean forcethrough = false;
+	bool forcethrough = false;
 
 	// regular thinking
 	SV_RunThink(ent);
@@ -822,7 +822,7 @@ void SV_AddRotationalFriction (edict_t *ent)
 void P_FallingDamage (edict_t *ent);
 void SV_Physics_Step (edict_t *ent)
 {
-	qboolean wasonground;
+	bool wasonground;
 	float *vel;
 	float speed, newspeed, control;
 	float friction;

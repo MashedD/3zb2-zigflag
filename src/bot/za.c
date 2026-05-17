@@ -2,7 +2,7 @@
 #include "../header/shared.h"
 #include "../header/player.h"
 
-qboolean pickup_pri;
+bool pickup_pri;
 
 int targetindex; //debugtarget
 char ClientMessage[MAX_STRING_CHARS];
@@ -11,7 +11,7 @@ route_t Route[MAXNODES];
 int CurrentIndex;
 int SpawnWaitingBots;
 float JumpMax = 0;
-qboolean JmpTableChk = false;
+bool JmpTableChk = false;
 float JumpTable[FALLCHK_LOOPMAX];
 int botskill;
 int trace_priority;
@@ -85,7 +85,7 @@ int FFlg[MAX_BOTSKILL] = {
 	FIRE_EXPAVOID | FIRE_IGNORE | FIRE_QUADUSE | FIRE_AVOIDINV | FIRE_IGNORE | FIRE_JUMPROC
 };
 
-qboolean BotApplyStrength (edict_t *ent)
+bool BotApplyStrength (edict_t *ent)
 {
 	static gitem_t *tech = NULL;
 
@@ -96,7 +96,7 @@ qboolean BotApplyStrength (edict_t *ent)
 
 	return false;
 }
-qboolean BotApplyResistance (edict_t *ent)
+bool BotApplyResistance (edict_t *ent)
 {
 	static gitem_t *tech = NULL;
 
@@ -112,7 +112,7 @@ qboolean BotApplyResistance (edict_t *ent)
 int Bot_SearchEnemy (edict_t *ent)
 {
 	zgcl_t *zc;	 //zc's address
-	qboolean tmpflg; //temporary
+	bool tmpflg; //temporary
 	edict_t *target, *trent;
 	trace_t rs_trace;
 
@@ -344,7 +344,7 @@ int Bot_SearchEnemy (edict_t *ent)
 void Bot_SearchItems (edict_t *ent)
 {
 	zgcl_t *zc;	    //zc's address
-	qboolean wstayf, q; //weaponflag
+	bool wstayf, q; //weaponflag
 	edict_t *target, *trent;
 
 	vec3_t touchmin, touchmax;
@@ -634,7 +634,7 @@ void Bot_SearchItems (edict_t *ent)
 				} else if (entcln[0] == 'w') {
 					if (entcln[7] == 's' && entcln[8] == 'h') //weapon_shotgun
 					{
-						qboolean isDropped = (trent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM)) != 0;
+						bool isDropped = (trent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM)) != 0;
 						if (!wstayf || (wstayf && (!pickup_pri || isDropped))) {
 							if (!ent->client->pers.inventory[ITEM_INDEX(Fdi_SHOTGUN)] || isDropped)
 								target = trent;
@@ -657,7 +657,7 @@ void Bot_SearchItems (edict_t *ent)
 							target = trent;
 					} else if (entcln[7] == 'r' && entcln[8] == 'o') //weapon_rocketlauncher
 					{
-						qboolean isDropped = (trent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM)) != 0;
+						bool isDropped = (trent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM)) != 0;
 						if (!wstayf || (wstayf && (!pickup_pri || isDropped))) {
 							if (!ent->client->pers.inventory[ITEM_INDEX(Fdi_ROCKETLAUNCHER)] || isDropped)
 								target = trent;
@@ -680,7 +680,7 @@ void Bot_SearchItems (edict_t *ent)
 							target = trent;
 					} else if (entcln[7] == 'b') //weapon_bfg
 					{
-						qboolean isDropped = (trent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM)) != 0;
+						bool isDropped = (trent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM)) != 0;
 						if (!wstayf || (wstayf && (!pickup_pri || isDropped))) {
 							if (!ent->client->pers.inventory[ITEM_INDEX(Fdi_BFG)] || isDropped)
 								target = trent;
@@ -753,8 +753,8 @@ void Bot_SearchItems (edict_t *ent)
 					target = NULL;
 			}
 			if (target != NULL && !ctf->value) {
-				qboolean isWeapon = (target->classname[0] == 'w');
-				qboolean isDroppedWeapon = isWeapon && (target->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM));
+				bool isWeapon = (target->classname[0] == 'w');
+				bool isDroppedWeapon = isWeapon && (target->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM));
 				float distToTarget = 0;
 				vec3_t distVec;
 				VectorSubtract(target->s.origin, ent->s.origin, distVec);
@@ -807,7 +807,7 @@ void Bot_SearchItems (edict_t *ent)
 //Avoid explotion
 //
 #define EXPLO_BOXSIZE 64
-qboolean Bot_ExploAvoid (edict_t *ent, vec3_t v)
+bool Bot_ExploAvoid (edict_t *ent, vec3_t v)
 {
 	int i;
 
@@ -863,7 +863,7 @@ qboolean Bot_ExploAvoid (edict_t *ent, vec3_t v)
 }
 
 //レーザーのチェック
-qboolean CheckLaser (vec3_t pos, vec3_t maxs, vec3_t mins)
+bool CheckLaser (vec3_t pos, vec3_t maxs, vec3_t mins)
 {
 	int i;
 	vec3_t v, end, absmax, absmin;
@@ -928,7 +928,7 @@ int Bot_moveT (edict_t *ent, float ryaw, vec3_t pos, float dist, float *bottom)
 	vec3_t trmin, trmax, v, vv;
 	trace_t rs_trace;
 	float tracelimit;
-	qboolean moveok;
+	bool moveok;
 	int contents;
 
 	int tcontents;
@@ -1296,7 +1296,7 @@ int Bot_moveW (edict_t *ent, float ryaw, vec3_t pos, float dist, float *bottom)
 // Bank check
 //	true	safe
 //	false	danger
-qboolean BankCheck (edict_t *ent, vec3_t pos)
+bool BankCheck (edict_t *ent, vec3_t pos)
 {
 	trace_t rs_trace;
 	vec3_t end, v1, v2;
@@ -1322,7 +1322,7 @@ qboolean BankCheck (edict_t *ent, vec3_t pos)
 // hazard check
 //	true	safe
 //	false	danger
-qboolean HazardCheck (edict_t *ent, vec3_t pos)
+bool HazardCheck (edict_t *ent, vec3_t pos)
 {
 	trace_t rs_trace;
 	vec3_t end, v1, v2;
@@ -1349,7 +1349,7 @@ qboolean HazardCheck (edict_t *ent, vec3_t pos)
 
 //-----------------------------------------------------------------------------------------
 // bot's shot
-/*qboolean Bot_Shot()
+/*bool Bot_Shot()
 {
 
 
@@ -1393,7 +1393,6 @@ void Set_Combatstate (edict_t *ent, int foundedenemy)
 	float distance;
 	edict_t *target;
 	int enewep;
-	int combskill;
 	float aim;
 
 	client = ent->client;
@@ -1438,7 +1437,7 @@ void Set_Combatstate (edict_t *ent, int foundedenemy)
 	//enemy's weapon
 	enewep = Get_KindWeapon(target->client->pers.weapon);
 
-	combskill = (int)Bot[client->zc.botindex].param[BOP_COMBATSKILL];
+	int combskill = (int)Bot[client->zc.botindex].param[BOP_COMBATSKILL];
 	if (combskill < 0 || combskill > 9)
 		combskill = 5;
 
@@ -1518,7 +1517,7 @@ int Bot_AssessThreat (edict_t *ent, edict_t *target, int foundedenemy, float dis
 // Bot Jump
 // return true		sequaense done
 // return false		failed
-qboolean Get_FlyingSpeed (float bottom, float block, float dist, float *speed)
+bool Get_FlyingSpeed (float bottom, float block, float dist, float *speed)
 {
 	float tdist;
 
@@ -1576,7 +1575,7 @@ qboolean Get_FlyingSpeed (float bottom, float block, float dist, float *speed)
 	return true;
 }
 
-qboolean Bot_Jump (edict_t *ent, vec3_t pos, float dist)
+bool Bot_Jump (edict_t *ent, vec3_t pos, float dist)
 {
 	float x, yaw, tdist, bottom, speed;
 	vec3_t temppos;
@@ -1625,7 +1624,7 @@ qboolean Bot_Jump (edict_t *ent, vec3_t pos, float dist)
 // return true		sequaense done
 // return false		failed
 
-qboolean Bot_Fall (edict_t *ent, vec3_t pos, float dist)
+bool Bot_Fall (edict_t *ent, vec3_t pos, float dist)
 {
 	zgcl_t *zc;
 	float x, l, speed, grav, vel, ypos, yori;
@@ -1827,7 +1826,7 @@ JMPCHK:
 //-----------------------------------------------------------------------------------------
 // target jump
 
-qboolean TargetJump (edict_t *ent, vec3_t tpos)
+bool TargetJump (edict_t *ent, vec3_t tpos)
 {
 	float x, l, grav, vel, ypos, yori;
 	vec3_t v, vv;
@@ -1887,7 +1886,7 @@ qboolean TargetJump (edict_t *ent, vec3_t tpos)
 	return false;
 }
 
-qboolean TargetJump_Turbo (edict_t *ent, vec3_t tpos)
+bool TargetJump_Turbo (edict_t *ent, vec3_t tpos)
 {
 	float x, l, grav, vel, ypos, yori;
 	vec3_t v, vv;
@@ -1956,7 +1955,7 @@ qboolean TargetJump_Turbo (edict_t *ent, vec3_t tpos)
 	}
 	return false;
 }
-qboolean TargetJump_Chk (edict_t *ent, vec3_t tpos, float defvel)
+bool TargetJump_Chk (edict_t *ent, vec3_t tpos, float defvel)
 {
 	float x, l, grav, vel, ypos, yori;
 	vec3_t v, vv;
@@ -2226,7 +2225,8 @@ void Bots_Move_NORM (edict_t *ent)
 
 	gitem_t *item;
 
-	float x, iyaw, f1, f2, f3, bottom;
+	float x, f1, f2, f3, bottom;
+	float iyaw = 0.0f;
 	float yaw = 0.0f;
 	int tempflag; //,buttonuse;
 	vec3_t temppos;
@@ -2236,7 +2236,7 @@ void Bots_Move_NORM (edict_t *ent)
 	vec3_t touchmin, touchmax, v, vv;
 	vec3_t trmin, trmax;
 	int i, j, k;
-	qboolean canrocj, waterjumped;
+	bool canrocj, waterjumped;
 	edict_t *it_ent;
 	gitem_t *it;
 
@@ -2249,7 +2249,7 @@ void Bots_Move_NORM (edict_t *ent)
 	vec3_t Origin, Velocity; //original param
 	float OYaw;		 //
 
-	qboolean ladderdrop;
+	bool ladderdrop;
 
 
 	trace_priority = TRP_NORMAL; //trace on
@@ -2279,9 +2279,9 @@ void Bots_Move_NORM (edict_t *ent)
 
 
 	if ((ent->client->zc.push_time > 0) && (((ent->groundentity == NULL) && (ent->client->zc.push_time + BOT_PUSH_IDLE_TIME_AIR) > level.time) || ((ent->groundentity != NULL) && (ent->client->zc.push_time + BOT_PUSH_IDLE_TIME_GROUND) > level.time))) {
-		qboolean pure_vertical = (ent->client->zc.push_norm[2] > 0.95);
+		bool pure_vertical = (ent->client->zc.push_norm[2] > 0.95);
 		if (!pure_vertical) {
-			qboolean move_regardless = (ent->groundentity != NULL) && (random() >= 0.80);
+			bool move_regardless = (ent->groundentity != NULL) && (random() >= 0.80);
 			if (!move_regardless) {
 				gi.linkentity(ent);
 				G_TouchTriggers(ent);
@@ -2510,9 +2510,9 @@ DCHCANC: //しゃがみっぱなし
 		dist = MOVE_SPD_DUCK * ent->moveinfo.speed;
 	else {
 		if (!ent->waterlevel) {
-			qboolean in_combat = (zc->first_target != NULL);
-			qboolean low_hp = (ent->health < 50);
-			qboolean roll_run = (random() < 0.25f);
+			bool in_combat = (zc->first_target != NULL);
+			bool low_hp = (ent->health < 50);
+			bool roll_run = (random() < 0.25f);
 
 			if (chedit->value || !Bot[zc->botindex].param[BOP_WALK] || !ent->groundentity || in_combat || low_hp || roll_run)
 				dist = MOVE_SPD_RUN * ent->moveinfo.speed;
@@ -2586,7 +2586,7 @@ DCHCANC: //しゃがみっぱなし
 
 			{
 				gitem_t *tdm_weps[] = {
-					Fdi_SHOTGUN, Fdi_SUPERSHOTGUN, Fdi_MACHINEGUN, Fdi_CHAINGUN, Fdi_GRENADELAUNCHER, Fdi_ROCKETLAUNCHER, Fdi_HYPERBLASTER, Fdi_RAILGUN, Fdi_BFG, Fdi_PHALANX, Fdi_BOOMER
+					Fdi_SHOTGUN, Fdi_SUPERSHOTGUN, Fdi_MACHINEGUN, Fdi_CHAINGUN, Fdi_GRENADELAUNCHER, Fdi_ROCKETLAUNCHER, Fdi_HYPERBLASTER, Fdi_RAILGUN, Fdi_BFG
 				};
 				for (tdm_k = 0; tdm_k < (int)(sizeof(tdm_weps) / sizeof(tdm_weps[0])); tdm_k++) {
 					if (!tdm_weps[tdm_k])
@@ -2793,7 +2793,7 @@ DCHCANC: //しゃがみっぱなし
 					{
 						if(Route[zc->routeindex + 1].state == GRS_GRAPSHOT)
 						{
-							if(TraceX(ent,Route[zc->routeindex + 1].Tcourner)) k = true; 
+							if(TraceX(ent,Route[zc->routeindex + 1].Tcourner)) k = true;
 						}
 						else k = true;
 					}*/
@@ -2918,7 +2918,7 @@ DCHCANC: //しゃがみっぱなし
 
 		zc->secondinterval++;
 
-		qboolean needBetterWeapon = false;
+		bool needBetterWeapon = false;
 		int mywep = Get_KindWeapon(ent->client->pers.weapon);
 		if (mywep <= WEAP_BLASTER || mywep == WEAP_GRENADES) {
 			needBetterWeapon = true;

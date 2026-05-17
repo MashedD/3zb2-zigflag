@@ -131,16 +131,14 @@ Example server config for ZigFlag:
 ```
 exec addbot.cfg
 exec configs-ctf.cfg
-set zigmode 1
-set zigspawn 1
-set zigkiller 1
 map q2ctf1
 ```
 
 ## Known Issues
 
-- The mod may lock up or segfault when using `gamemap`. Use `map` (full level reset) instead. On Q2Pro, set `sv_allow_map 1` to allow this.
-- Some models (e.g., grappling hook) are missing and require copying `pak` files from the `ctf` mod.
+- The mod may lock up or segfault when using `gamemap`.  
+  Use `map` (_full level reset_) instead. On Q2Pro, set `sv_allow_map 1` to allow this.
+- Some models (_e.g. grappling hook_) are missing and require copying `pak` files from the `ctf` mod.
 
 ## Credits
 

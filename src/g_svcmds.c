@@ -50,7 +50,7 @@ int numipfilters;
 StringToFilter
 =================
 */
-static qboolean StringToFilter (char *s, ipfilter_t *f)
+static bool StringToFilter (char *s, ipfilter_t *f)
 {
 	char num[128];
 	int i, j;
@@ -93,7 +93,7 @@ static qboolean StringToFilter (char *s, ipfilter_t *f)
 SV_FilterPacket
 =================
 */
-qboolean SV_FilterPacket (char *from)
+bool SV_FilterPacket (char *from)
 {
 	int i;
 	unsigned in;
@@ -214,9 +214,9 @@ void SVCmd_WriteIP_f (void)
 	game = gi.cvar("game", "", 0);
 
 	if (!*game->string)
-		sprintf(name, "%s/listip.cfg", GAMEVERSION);
+		snprintf(name, sizeof(name), "%s/listip.cfg", GAMEVERSION);
 	else
-		sprintf(name, "%s/listip.cfg", game->string);
+		snprintf(name, sizeof(name), "%s/listip.cfg", game->string);
 
 	gi.cprintf(NULL, PRINT_HIGH, "Writing %s.\n", name);
 
@@ -236,7 +236,6 @@ void SVCmd_WriteIP_f (void)
 	fclose(f);
 }
 
-
 //ルート修正
 //ノーマルポッドは全て切り捨て
 void Move_LastRouteIndex ()
@@ -249,16 +248,20 @@ void Move_LastRouteIndex ()
 		else if (!Route[i].index)
 			break;
 	}
+
+	// limit index range fixes memset offset out of bounds warning
+	if (i < 0 || i >= MAXNODES)
+		return;
+
 	if (!CurrentIndex || !Route[i].index)
 		CurrentIndex = i;
 	else
 		CurrentIndex = i + 1;
 
 	if (CurrentIndex < MAXNODES) {
-		if (CurrentIndex > 0) {
-			memset(&Route[CurrentIndex], 0, sizeof(route_t));
+		memset(&Route[CurrentIndex], 0, sizeof(route_t));
+		if (CurrentIndex > 0)
 			Route[CurrentIndex].index = Route[CurrentIndex - 1].index + 1;
-		}
 	}
 }
 
@@ -292,13 +295,10 @@ void SaveChain ()
 	}
 
 	//とりあえずCTFだめ
-	//if(ctf->value) 	sprintf(name,".\\%s\\chctf\\%s.chf",gamepath->string,level.mapname);
-	//else 	sprintf(name,".\\%s\\chdtm\\%s.chn",gamepath->string,level.mapname);
-
 	if (ctf->value)
-		sprintf(name, "%s/%s/chctf/%s.chf", GET_BASEPATH_STR(), gamepath->string, level.mapname);
+		snprintf(name, sizeof(name), "%s/%s/chctf/%s.chf", GET_BASEPATH_STR(), gamepath->string, level.mapname);
 	else
-		sprintf(name, "%s/%s/chdtm/%s.chn", GET_BASEPATH_STR(), gamepath->string, level.mapname);
+		snprintf(name, sizeof(name), "%s/%s/chdtm/%s.chn", GET_BASEPATH_STR(), gamepath->string, level.mapname);
 
 	fpout = fopen(name, "wb");
 	if (fpout == NULL)

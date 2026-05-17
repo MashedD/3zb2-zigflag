@@ -333,10 +333,10 @@ void vectoangles (vec3_t value1, vec3_t angles)
 
 char *G_CopyString (char *in)
 {
-	char *out;
+	size_t len = strlen(in) + 1;
 
-	out = gi.TagMalloc(strlen(in) + 1, TAG_LEVEL);
-	strcpy(out, in);
+	char *out = gi.TagMalloc(strlen(in) + 1, TAG_LEVEL);
+	memcpy(out, in, len);
 	return out;
 }
 
@@ -369,7 +369,7 @@ edict_t *G_Spawn (void)
 	const int MAX_ATTEMPTS = 2;
 
 	for (attempt = 1; attempt <= MAX_ATTEMPTS; ++attempt) {
-		qboolean permit_recently_freed = (attempt > 1);
+		bool permit_recently_freed = (attempt > 1);
 
 		i = (int)maxclients->value + 1;
 		e = &g_edicts[i];
@@ -414,11 +414,11 @@ void G_FreeEdict (edict_t *ed)
 
 #define MAX_RECLAIM_SEVERITY 2
 
-static qboolean entityIsNonessential (const edict_t *e, int severity)
+static bool entityIsNonessential (const edict_t *e, int severity)
 {
-	qboolean is_gib = ((e->s.effects & EF_GIB) && e->think == G_FreeEdict);
-	qboolean is_dropped_item = (e->spawnflags & DROPPED_ITEM) && !(e->spawnflags & DROPPED_PLAYER_ITEM);
-	qboolean is_missile = (e->movetype == MOVETYPE_FLYMISSILE && e->think == G_FreeEdict);
+	bool is_gib = ((e->s.effects & EF_GIB) && e->think == G_FreeEdict);
+	bool is_dropped_item = (e->spawnflags & DROPPED_ITEM) && !(e->spawnflags & DROPPED_PLAYER_ITEM);
+	bool is_missile = (e->movetype == MOVETYPE_FLYMISSILE && e->think == G_FreeEdict);
 	return is_gib || ((severity > 0) && is_dropped_item) || ((severity > 1) && is_missile);
 }
 
@@ -472,7 +472,7 @@ void G_EmergencyMaintainMinimumFreeEntityPool (int pool_size)
 	}
 }
 
-qboolean G_EntityUseNearEmergencyThreshold (void)
+bool G_EntityUseNearEmergencyThreshold (void)
 {
 	const int pool_proximity_threshold = 32; // arbitrary
 	int num_free = (game.maxentities - globals.num_edicts);
@@ -633,7 +633,7 @@ Kills all entities that would touch the proposed new positioning
 of ent.  Ent should be unlinked before calling this!
 =================
 */
-qboolean KillBox (edict_t *ent)
+bool KillBox (edict_t *ent)
 {
 	if (fixflaws->value) {
 		edict_t *touch[MAX_EDICTS];

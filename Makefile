@@ -1,17 +1,20 @@
 # Detect the OS
-ifdef SystemRoot
-OSTYPE := Windows
+ifdef SYSTEMROOT
+override OSTYPE := Windows
 else
 OSTYPE := $(shell uname -s)
 endif
 
-# Special case for MinGW
-ifneq (,$(findstring MINGW,$(OSTYPE)))
-OSTYPE := Windows
+ifdef FORCE_OSTYPE
+override OSTYPE := $(FORCE_OSTYPE)
+endif
+
+ifneq (,$(filter MINGW% MSYS%,$(OSTYPE)))
+override OSTYPE := Windows
 endif
 
 # Detect the architecture
-ifeq ($(OSTYPE), Windows)
+ifeq ($(OSTYPE),Windows)
 ifdef PROCESSOR_ARCHITEW6432
 # 64 bit Windows
 ARCH := $(PROCESSOR_ARCHITEW6432)
@@ -55,13 +58,23 @@ endif
 # -fPIC for position independend code.
 #
 # -MMD to generate header dependencies.
-ifeq ($(OSTYPE), Darwin)
+ifeq ($(OSTYPE),Darwin)
 CFLAGS := -O2 -fno-strict-aliasing -fomit-frame-pointer \
-		  -Wall -pipe -g -fwrapv -arch i386 -arch x86_64
+		  -Wall -pipe -g -fwrapv -arch arm64 \
+		  -Wno-unused-but-set-variable
 else
 CFLAGS := -O2 -fno-strict-aliasing -fomit-frame-pointer \
-		  -Wall -pipe -g -MMD -fwrapv -fPIC -msse2 -mfpmath=sse -Wno-unused-result \
-		  -std=gnu99
+		  -Wall -pipe -g -MMD -fwrapv -std=gnu99
+endif
+
+ifeq ($(OSTYPE),Linux)
+CFLAGS += -fPIC
+endif
+
+RARCH := $(shell $(CC) -dumpmachine)
+
+ifeq ($(findstring i686,$(RARCH)),i686)
+CFLAGS += -msse2 -mfpmath=sse
 endif
 
 # ----------
@@ -89,8 +102,8 @@ CFLAGS += -DOSTYPE=\"$(OSTYPE)\" -DARCH=\"$(ARCH)\"
 
 # Base LDFLAGS.
 ifeq ($(OSTYPE), Darwin)
-LDFLAGS := -shared -arch i386 -arch x86_64 
-else ifeq ($(OSTYPE), Windows)
+LDFLAGS := -shared -arch arm64
+else ifeq ($(OSTYPE),Windows)
 LDFLAGS := -shared -static-libgcc
 else
 LDFLAGS := -shared -lm
@@ -127,7 +140,7 @@ clean:
 # ----------
 
 # The 3zb2 game
-ifeq ($(OSTYPE), Windows)
+ifeq ($(OSTYPE),Windows)
 3zb2:
 	@echo "===> Building game.dll"
 	${Q}mkdir -p release
@@ -142,8 +155,6 @@ else
 	@echo "===> Building game.so"
 	${Q}mkdir -p release
 	$(MAKE) release/game.so
-
-release/game.so : CFLAGS += -fPIC
 endif
 
 build/%.o: %.c
@@ -201,7 +212,7 @@ build/%.o: %.c
 
 # ----------
 
-ifeq ($(OSTYPE), Windows)
+ifeq ($(OSTYPE),Windows)
 release/game.dll : $(3ZB2_OBJS)
 	@echo "===> LD $@"
 	${Q}$(CC) $(LDFLAGS) -o $@ $(3ZB2_OBJS)
@@ -214,4 +225,3 @@ release/game.so : $(3ZB2_OBJS)
 	@echo "===> LD $@"
 	${Q}$(CC) $(LDFLAGS) -o $@ $(3ZB2_OBJS)
 endif
-

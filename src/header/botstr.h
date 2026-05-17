@@ -14,8 +14,8 @@ typedef struct zgcl_s
 	int aiming;	   //0-not 1-aiming  2-firing zoomingflag
 	float distance;	   //zoom中のFOV値
 	float olddistance; //旧zooming FOV値
-	qboolean autozoom; //autozoom
-	qboolean lockon;   //lockon flag false-not true-locking
+	bool autozoom; //autozoom
+	bool lockon;   //lockon flag false-not true-locking
 
 	// bot用
 	int zcstate;  //status
@@ -59,7 +59,7 @@ typedef struct zgcl_s
 	vec3_t push_norm;   //velocity normal imparted by last trigger_push
 
 	//target object shot
-	qboolean objshot;
+	bool objshot;
 
 
 	edict_t *sighten; //sighting enemy to me info from entity sight
@@ -69,11 +69,11 @@ typedef struct zgcl_s
 	int waterstate;
 
 	//route
-	qboolean route_trace;
+	bool route_trace;
 	int routeindex; //routing index
 	float rt_locktime;
 	float rt_releasetime;
-	qboolean havetarget; //target on/off
+	bool havetarget; //target on/off
 	int targetindex;
 
 	//battle
@@ -89,7 +89,7 @@ typedef struct zgcl_s
 	char secwep_selected; //secondweapon selected
 
 	vec3_t aimedpos;  //shottenpoint
-	qboolean trapped; //trapflag
+	bool trapped; //trapflag
 
 	//threat assessment
 	float threat_level;	 //0.0-1.0: how dangerous current situation is

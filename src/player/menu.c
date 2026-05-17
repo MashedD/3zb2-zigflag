@@ -60,7 +60,7 @@ void PMenu_Update (edict_t *ent)
 	int x;
 	pmenuhnd_t *hnd;
 	char *t;
-	qboolean alt = false;
+	bool alt = false;
 
 	if (!ent->client->menu) {
 		gi.dprintf("warning:  ent has no menu\n");
@@ -69,7 +69,7 @@ void PMenu_Update (edict_t *ent)
 
 	hnd = ent->client->menu;
 
-	strcpy(string, "xv 32 yv 8 picn inventory ");
+	strlcpy(string, "xv 32 yv 8 picn inventory ", sizeof(string));
 
 	for (i = 0, p = hnd->entries; i < hnd->num; i++, p++) {
 		if (!p->text || !*(p->text))
@@ -79,7 +79,7 @@ void PMenu_Update (edict_t *ent)
 			alt = true;
 			t++;
 		}
-		sprintf(string + strlen(string), "yv %d ", 32 + i * 8);
+		snprintf(string + strlen(string), sizeof(string) - strlen(string), "yv %d ", 32 + i * 8);
 		if (p->align == PMENU_ALIGN_CENTER)
 			x = 196 / 2 - strlen(t) * 4 + 64;
 		else if (p->align == PMENU_ALIGN_RIGHT)
@@ -87,14 +87,14 @@ void PMenu_Update (edict_t *ent)
 		else
 			x = 64;
 
-		sprintf(string + strlen(string), "xv %d ", x - ((hnd->cur == i) ? 8 : 0));
+		snprintf(string + strlen(string), sizeof(string) - strlen(string), "xv %d ", x - ((hnd->cur == i) ? 8 : 0));
 
 		if (hnd->cur == i)
-			sprintf(string + strlen(string), "string2 \"\x0d%s\" ", t);
+			snprintf(string + strlen(string), sizeof(string) - strlen(string), "string2 \"\x0d%s\" ", t);
 		else if (alt)
-			sprintf(string + strlen(string), "string2 \"%s\" ", t);
+			snprintf(string + strlen(string), sizeof(string) - strlen(string), "string2 \"%s\" ", t);
 		else
-			sprintf(string + strlen(string), "string \"%s\" ", t);
+			snprintf(string + strlen(string), sizeof(string) - strlen(string), "string \"%s\" ", t);
 		alt = false;
 	}
 

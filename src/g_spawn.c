@@ -312,18 +312,16 @@ Set the Observe mode string
 */
 void CSObserve ()
 {
-	char observe[32];
-	char tab[4];
-	char end[16];
-	char Highlight[MAX_STRING_CHARS];
+	char observe[64];
+	char highlight[32];
+	char noone[32];
 
-	sprintf(observe, "[");
-	sprintf(tab, "ENT");
-	sprintf(end, "] to Join");
-	HighlightStr(Highlight, tab, MAX_STRING_CHARS);
-	strcat(observe, Highlight);
-	strcat(observe, end);
-	gi.configstring(CS_OBSERVE, observe);
+	HighlightStr(highlight, "USE", sizeof(highlight));
+	Com_sprintf(observe, sizeof(observe), "[%s] to Join", highlight);
+	gi.configstring(CS_OBSERVE1, observe);
+
+	HighlightStr(noone, "NO CHASE TARGET", sizeof(noone));
+	gi.configstring(CS_OBSERVE2, noone);
 }
 
 /*
@@ -492,7 +490,7 @@ ed should be a properly initialized empty edict.
 */
 char *ED_ParseEdict (char *data, edict_t *ent)
 {
-	qboolean init;
+	bool init;
 	char keyname[256];
 	char *com_token;
 
@@ -508,7 +506,7 @@ char *ED_ParseEdict (char *data, edict_t *ent)
 		if (!data)
 			gi.error("ED_ParseEntity: EOF without closing brace");
 
-		strncpy(keyname, com_token, sizeof(keyname) - 1);
+		strlcpy(keyname, com_token, sizeof(keyname));
 
 		// parse value
 		com_token = COM_Parse(&data);
@@ -599,7 +597,7 @@ void G_FindTrainTeam ()
 	edict_t *teamlist[MAX_EDICTS + 1];
 	edict_t *e, *t, *p;
 
-	qboolean findteam;
+	bool findteam;
 	char *currtarget, *currtargetname;
 	char *targethist[MAX_EDICTS];
 	int lc, i, j, k;
@@ -719,7 +717,7 @@ RTJump_Chk
 ================
 */
 
-qboolean RTJump_Chk (vec3_t apos, vec3_t tpos)
+bool RTJump_Chk (vec3_t apos, vec3_t tpos)
 {
 	float x, l, grav, vel, ypos, yori;
 	vec3_t v, vv;
@@ -778,7 +776,7 @@ void G_FindRouteLink (edict_t *ent)
 {
 	trace_t rs_trace;
 
-	qboolean tpbool;
+	bool tpbool;
 
 	int i, j, k, l, total = 0;
 	vec3_t v, vv;
@@ -786,7 +784,7 @@ void G_FindRouteLink (edict_t *ent)
 
 
 	//旗を発生させる
-	if (!ctf->value && zigmode->value == 1) {
+	if (!ctf->value && zigmode->value) {
 		SelectFlagSpawnPoint(ent, v, vv);
 		if (ZIGDrop_FlagCheck(ent, zflag_item)) {
 			gi.dprintf("Starting ZigFlag mode...\n");
@@ -959,8 +957,8 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 	memset(&level, 0, sizeof(level));
 	memset(g_edicts, 0, game.maxentities * sizeof(g_edicts[0]));
 
-	strncpy(level.mapname, mapname, sizeof(level.mapname) - 1);
-	strncpy(game.spawnpoint, spawnpoint, sizeof(game.spawnpoint) - 1);
+	strlcpy(level.mapname, mapname, sizeof(level.mapname));
+	strlcpy(game.spawnpoint, spawnpoint, sizeof(game.spawnpoint));
 
 	// set client fields on player ents
 	for (i = 0; i < game.maxclients; i++) {
@@ -1046,14 +1044,9 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 		G_FindItemLink(); //アイテムのリンク(通常時のみ)
 
 	CSObserve();
-	if (!ctf->value && zigmode->value) {
-		gi.dprintf("zigmode requires CTF; disabling.\n");
-		gi.cvar_set("zigmode", "0");
-		zigmode->value = 0;
-	}
 	G_SpawnRouteLink();
 
-	if (ctf->value && zigmode->value == 1)
+	if (zigmode->value)
 		zigflag_spawn = 1;
 	else
 		zigflag_spawn = 0;
@@ -1354,7 +1347,7 @@ void SP_worldspawn (edict_t *ent)
 {
 	ent->movetype = MOVETYPE_PUSH;
 	ent->solid = SOLID_BSP;
-	ent->inuse = true;     // since the world doesn't use G_Spawn()
+	ent->inuse = true;    // since the world doesn't use G_Spawn()
 	ent->s.modelindex = 1; // world model is always index 1
 
 	//---------------
@@ -1366,7 +1359,7 @@ void SP_worldspawn (edict_t *ent)
 	SetItemNames();
 
 	if (st.nextmap)
-		strcpy(level.nextmap, st.nextmap);
+		strlcpy(level.nextmap, st.nextmap, MAX_QPATH);
 
 	// make some data visible to the server
 
@@ -1375,7 +1368,7 @@ void SP_worldspawn (edict_t *ent)
 		int sizeLn = strnlen(ent->message, sizeof(level.level_name) - 1);
 		memcpy(level.level_name, ent->message, sizeLn + 1);
 	} else
-		strncpy(level.level_name, level.mapname, sizeof(level.level_name));
+		strlcpy(level.level_name, level.mapname, sizeof(level.level_name));
 
 	if (st.sky && st.sky[0])
 		gi.configstring(CS_SKY, st.sky);
@@ -1416,7 +1409,7 @@ void SP_worldspawn (edict_t *ent)
 				gi.soundindex("weapons/grapple/grfire.wav");
 			}*/
 			//ZOID
-		} else if (zigmode->value == 1) {
+		} else if (zigmode->value) {
 			gi.configstring(CS_STATUSBAR, zig_statusbar);
 			gi.imageindex("i_zig");
 			gi.imageindex("zigtag");
