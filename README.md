@@ -10,7 +10,6 @@ Originally built for nostalgia of the 90's Quake II deathmatch servers, this mod
 
 ![Capture and Hold](screenshot/screenshot.png)
 ![Capture and Hold](screenshot/screenshot2.png)
-![q2pro: Deathmatch on q2deck with instagib](screenshot/screenshot3.png)
 
 ## Features
 
@@ -26,33 +25,22 @@ The premise is simple: **get the flag and keep it**. Plays on standard Deathmatc
 - Optional auto weapon switching, respawn protection, and grapple
 - Skin and model teams with bonuses/penalties on flag possession and friendly fire
 
-### General
+### Updates and Additions
 
-- `store` / `recall` commands to save and restore player position (Jump mod style)
-- Remaining time display for all game modes
+- `store` / `recall` commands to save and restore player position (_Jump mod style_).
+- Remaining time display for all game modes.
 - Basic Team Deathmatch support (`set tdm 1`)
 - Instagib option (`set instagib 1`)
-- Random player spawn points on map start
-- Fixed menu item selection
-- Improved aim (`aimfix`), Quake 2 gameplay flaw fixes (`fixflaws`)
-- Use `accuracy` or `stats` and `stats-all` to display stats
-- `set announcer 1` for Unreal Tournament like messages and announcements.
-  Create `sound/announcer` folder and place there files:
-    - doublekill.wav
-    - megakill.wav
-    - monsterkill.wav
-    - multikill.wav
-    - triplekill.wav
-    - ultrakill.wav
-
-  You can download them from <https://sounds.spriters-resource.com/pc_computer/unrealtournament/>.
-  I recommended playing deathmatch with `instagib` on map [q2deck](https://leray.proboards.com/post/30128)
-  and playing [Foregone Destruction](https://www.youtube.com/watch?v=eEcPakW42JU) on YouTube.
-- `set g_sticky_grenades 1` option turns on sticky grenades
-- `set g_crouching 1` to enable Remastered-like crouching in air
-- Added `menu` command
-- Bots can now drop weapons + ammo for player in TDM/CTF
-- Added possibility of displaying hit markers, compatible with q2pro
+- `set g_crouching 1` to enable crouching mid-air.
+- `set g_sticky_grenades 1` for adhesive grenades.
+- `set announcer 1` for callout messages.
+- Random player spawn points on map start.
+- Fixed menu item selection.
+- Improved aim (`aimfix`) - Quake 2 gameplay flaw fixes (`fixflaws`)
+- Use `accuracy`, `stats` and `stats-all` for detailed player stats.
+- Added `menu` command.
+- Bots can now drop weapons + ammo for player in TDM/CTF.
+- Added possibility of displaying hit markers, compatible with q2pro.
 
 See [CONFIG.md](CONFIG.md) for full configuration details.
 
