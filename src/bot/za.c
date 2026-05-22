@@ -1515,7 +1515,7 @@ int Bot_AssessThreat (edict_t *ent, edict_t *target, int foundedenemy, float dis
 
 //-----------------------------------------------------------------------------------------
 // Bot Jump
-// return true		sequaense done
+// return true		sequence done
 // return false		failed
 bool Get_FlyingSpeed (float bottom, float block, float dist, float *speed)
 {
@@ -1621,7 +1621,7 @@ bool Bot_Jump (edict_t *ent, vec3_t pos, float dist)
 
 //-----------------------------------------------------------------------------------------
 // Bot Fall
-// return true		sequaense done
+// return true		sequence done
 // return false		failed
 
 bool Bot_Fall (edict_t *ent, vec3_t pos, float dist)
