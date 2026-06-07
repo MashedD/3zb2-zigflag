@@ -40,7 +40,6 @@ The premise is simple: **get the flag and keep it**. Plays on standard Deathmatc
 - Use `accuracy`, `stats` and `stats-all` for detailed player stats.
 - Added `menu` command.
 - Bots can now drop weapons + ammo for player in TDM/CTF.
-- Added possibility of displaying hit markers, compatible with q2pro.
 
 See [CONFIG.md](CONFIG.md) for full configuration details.
 
