@@ -547,7 +547,7 @@ void TossClientWeapon (edict_t *self)
 		item = NULL;
 	if (item && (strcmp(item->pickup_name, "Blaster") == 0))
 		item = NULL;
-	if (item && instagib && instagib->value)
+	if (item && ((instagib && instagib->value) || (chaingib && chaingib->value)))
 		item = NULL;
 
 	if (!((int)(dmflags->value) & DF_QUAD_DROP))
@@ -793,6 +793,17 @@ void InitClientPersistant (gclient_t *client)
 		client->pers.weapon = item;
 		client->pers.lastweapon = item;
 		client->pers.inventory[ITEM_INDEX(FindItem("Slugs"))] = 50;
+	} else if (chaingib && chaingib->value) {
+		item = FindItem("Chaingun");
+		if (!item)
+			gi.error("No Chaingun item found");
+		client->pers.selected_item = ITEM_INDEX(item);
+		client->pers.inventory[client->pers.selected_item] = 1;
+
+		client->pers.weapon = item;
+		client->pers.lastweapon = item;
+		client->pers.inventory[ITEM_INDEX(FindItem("Bullets"))] = 200;
+		client->pers.inventory[ITEM_INDEX(FindItem("Body Armor"))] = 100;
 	} else {
 		item = FindItem("Blaster");
 		if (!item)
@@ -808,7 +819,7 @@ void InitClientPersistant (gclient_t *client)
 
 	//ZOID
 	item = FindItem("Grapple");
-	if (ctf->value || zigrapple->value)
+	if ((ctf->value || zigrapple->value) && !(chaingib && chaingib->value))
 		client->pers.inventory[ITEM_INDEX(item)] = 1; //ponpoko
 							      //ZOID
 	if (client->joined)

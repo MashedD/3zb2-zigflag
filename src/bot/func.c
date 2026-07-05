@@ -438,6 +438,12 @@ void PutBotInServer (edict_t *ent)
 		if (!item)
 			gi.error("No Railgun item found");
 		client->pers.inventory[ITEM_INDEX(FindItem("Slugs"))] = 50;
+	} else if (chaingib && chaingib->value) {
+		item = FindItem("Chaingun");
+		if (!item)
+			gi.error("No Chaingun item found");
+		client->pers.inventory[ITEM_INDEX(FindItem("Bullets"))] = 200;
+		client->pers.inventory[ITEM_INDEX(FindItem("Body Armor"))] = 100;
 	} else {
 		item = FindItem("Blaster");
 		if (!item)
@@ -447,6 +453,10 @@ void PutBotInServer (edict_t *ent)
 	client->pers.selected_item = ITEM_INDEX(item);
 	client->pers.inventory[client->pers.selected_item] = 1;
 	client->pers.weapon = item;
+	if (item->ammo)
+		client->ammo_index = ITEM_INDEX(FindItem(item->ammo));
+	else
+		client->ammo_index = 0;
 
 	client->silencer_shots = 0;
 	client->weaponstate = WEAPON_READY;
@@ -470,7 +480,7 @@ void PutBotInServer (edict_t *ent)
 	client->ctf_grapple = NULL;
 
 	item = FindItem("Grapple");
-	if (ctf->value || zigrapple->value)
+	if ((ctf->value || zigrapple->value) && !(chaingib && chaingib->value))
 		client->pers.inventory[ITEM_INDEX(item)] = 1; //ponpoko
 							      //ZOID
 

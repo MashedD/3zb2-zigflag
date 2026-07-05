@@ -173,6 +173,7 @@ void InitGame (void)
 	//game mode
 	zigmode = gi.cvar("zigmode", "0", CVAR_SERVERINFO | CVAR_LATCH);
 	instagib = gi.cvar("instagib", "0", CVAR_SERVERINFO | CVAR_LATCH);
+	chaingib = gi.cvar("chaingib", "0", CVAR_SERVERINFO | CVAR_LATCH);
 	//game setup
 	zigintro = gi.cvar("zigintro", "0", CVAR_LATCH);
 	//ZOID

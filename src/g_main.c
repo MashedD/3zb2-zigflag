@@ -70,6 +70,7 @@ cvar_t *autospawn;
 cvar_t *autobot;
 cvar_t *zigmode;
 cvar_t *instagib;
+cvar_t *chaingib;
 cvar_t *zigspawn;
 cvar_t *zigkiller;
 cvar_t *zigrapple;

@@ -362,6 +362,9 @@ void Use_Weapon (edict_t *ent, gitem_t *item)
 	int ammo_index;
 	gitem_t *ammo_item;
 
+	if (chaingib && chaingib->value && item != Fdi_CHAINGUN)
+		return;
+
 	// see if we're already using it
 	if (item == ent->client->pers.weapon)
 		return;
@@ -403,6 +406,9 @@ void Use_Weapon2 (edict_t *ent, gitem_t *item)
 	gitem_t *ammo_item;
 	gitem_t *nextitem;
 	int index;
+
+	if (chaingib && chaingib->value && item != Fdi_CHAINGUN)
+		return;
 
 	if (ent->svflags & SVF_MONSTER) {
 		Use_Weapon(ent, item);
@@ -1379,7 +1385,7 @@ void Chaingun_Fire (edict_t *ent)
 
 	// ### Hentai ### END
 
-	if (!((int)dmflags->value & DF_INFINITE_AMMO))
+	if (!((int)dmflags->value & DF_INFINITE_AMMO) && !(chaingib && chaingib->value))
 		ent->client->pers.inventory[ent->client->ammo_index] -= shots;
 }
 

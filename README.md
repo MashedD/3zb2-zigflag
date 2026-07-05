@@ -30,7 +30,7 @@ The premise is simple: **get the flag and keep it**. Plays on standard Deathmatc
 - `store` / `recall` commands to save and restore player position (_Jump mod style_).
 - Remaining time display for all game modes.
 - Basic Team Deathmatch support (`set tdm 1`)
-- Instagib option (`set instagib 1`)
+- Instagib (`set instagib 1`) and Chaingib (`set chaingib 1`) weapon modes
 - `set g_crouching 1` to enable crouching mid-air.
 - `set g_sticky_grenades 1` for adhesive grenades.
 - `set announcer 1` for callout messages.
@@ -121,6 +121,17 @@ exec configs-ctf.cfg
 map q2ctf1
 ```
 
+### Chaingib
+
+Enable Chaingib before starting a map:
+
+```
+set chaingib 1
+map q2dm1
+```
+
+Chaingib is a chaingun-only deathmatch mode. Players and bots spawn with a Chaingun, 200 bullets, and Body Armor. Map weapons, ammo, armor, powerups, CTF techs, grapple, weapon drops, bullet drops, ammo consumption, and falling damage are disabled while the mode is active.
+
 ## Known Issues
 
 - The mod may lock up or segfault when using `gamemap`.  
@@ -136,4 +147,3 @@ map q2ctf1
 ## License
 
 Id Software Quake II Source Code License. See [LICENSE](LICENSE) for details.
-

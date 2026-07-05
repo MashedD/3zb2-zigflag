@@ -495,6 +495,10 @@ void Cmd_Drop_f (edict_t *ent)
 		gi.cprintf(ent, PRINT_HIGH, "Can't drop slugs in instagib mode\n");
 		return;
 	}
+	if (chaingib && chaingib->value && !Q_stricmp(it->pickup_name, "Bullets")) {
+		gi.cprintf(ent, PRINT_HIGH, "Can't drop bullets in chaingib mode\n");
+		return;
+	}
 	if (!it->drop) {
 		gi.cprintf(ent, PRINT_HIGH, "Item is not dropable.\n");
 		return;
