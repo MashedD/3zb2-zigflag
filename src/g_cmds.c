@@ -1457,6 +1457,11 @@ void Cmd_Recall_f (edict_t *ent)
 	if (!ent->client)
 		return;
 
+	if (!sv_cheats->value) {
+		gi.cprintf(ent, PRINT_HIGH, "Not allowed\n");
+		return;
+	}
+
 	if (ent->client->pers.stored_frame == 0) {
 		gi.cprintf(ent, PRINT_HIGH, "No valid position stored.\n");
 		return;

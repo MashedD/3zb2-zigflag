@@ -27,7 +27,7 @@ The premise is simple: **get the flag and keep it**. Plays on standard Deathmatc
 
 ### Updates and Additions
 
-- `store` / `recall` commands to save and restore player position (_Jump mod style_).
+- `store` / `recall` commands to save and restore player position when the server is started with `+set cheats 1` (_Jump mod style_).
 - Remaining time display for all game modes.
 - Basic Team Deathmatch support (`set tdm 1`)
 - Instagib (`set instagib 1`) and Chaingib (`set chaingib 1`) weapon modes
