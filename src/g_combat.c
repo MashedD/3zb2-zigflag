@@ -419,6 +419,11 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 	if (!(dflags & DAMAGE_NO_PROTECTION) && CheckTeamDamage(targ, attacker))
 		return;
 
+	if (chaingib && chaingib->value && client && (take > 0 || psave > 0 || asave > save)) {
+		client->chaingib_last_damage_time = level.time;
+		client->chaingib_health_regen_progress = 0;
+	}
+
 	//ZOID
 	CTFCheckHurtCarrier(targ, attacker);
 	//ZOID

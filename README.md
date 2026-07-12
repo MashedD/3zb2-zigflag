@@ -130,7 +130,9 @@ set chaingib 1
 map q2dm1
 ```
 
-Chaingib is a chaingun-only deathmatch mode. Players and bots spawn with a Chaingun, 200 bullets, and Body Armor. Map weapons, ammo, armor, powerups, CTF techs, grapple, weapon drops, bullet drops, ammo consumption, and falling damage are disabled while the mode is active.
+Chaingib is a chaingun-only deathmatch mode. Players and bots spawn with 100 health, 100 Body Armor, a Chaingun, and 100 bullets. Map weapons, ammo, armor, powerups, CTF techs, grapple, weapon drops, bullet drops, and falling damage are disabled while the mode is active. Bullets are consumed normally, then regenerate after a short firing pause. Health regenerates after the player has stopped both firing and taking damage.
+
+The competitive defaults restore 10 health per second after 3 seconds out of combat and 10 bullets per second after 2 seconds without firing. Health is capped at 100 and bullets at 200. These values can be tuned with the `chaingib_health_regen_delay`, `chaingib_health_regen_rate`, `chaingib_health_regen_cap`, `chaingib_ammo_regen_delay`, `chaingib_ammo_regen_rate`, `chaingib_ammo_spawn`, and `chaingib_ammo_cap` cvars.
 
 ## Known Issues
 

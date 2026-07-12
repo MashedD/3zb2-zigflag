@@ -630,6 +630,13 @@ extern cvar_t *autobot;
 extern cvar_t *zigmode;
 extern cvar_t *instagib;
 extern cvar_t *chaingib;
+extern cvar_t *chaingib_health_regen_delay;
+extern cvar_t *chaingib_health_regen_rate;
+extern cvar_t *chaingib_health_regen_cap;
+extern cvar_t *chaingib_ammo_regen_delay;
+extern cvar_t *chaingib_ammo_regen_rate;
+extern cvar_t *chaingib_ammo_spawn;
+extern cvar_t *chaingib_ammo_cap;
 extern cvar_t *zigspawn;
 extern cvar_t *zigkiller;
 extern cvar_t *zigrapple;
@@ -879,6 +886,8 @@ void InitClientPersistant (gclient_t *client);
 void InitClientResp (gclient_t *client);
 void InitBodyQue (void);
 void ClientBeginServerFrame (edict_t *ent);
+void ChaingibResetRegeneration (gclient_t *client);
+void ChaingibApplyRegeneration (edict_t *ent);
 
 //
 // g_player.c
@@ -1225,6 +1234,12 @@ struct gclient_s
 	float pickup_msg_time;
 
 	float respawn_time; // can respawn when time > this
+
+	// Chaingib out-of-combat health and ammunition regeneration
+	float chaingib_last_fire_time;
+	float chaingib_last_damage_time;
+	float chaingib_health_regen_progress;
+	float chaingib_ammo_regen_progress;
 
 	//ZOID
 	void *ctf_grapple;	      // entity of grapple

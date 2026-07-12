@@ -174,6 +174,13 @@ void InitGame (void)
 	zigmode = gi.cvar("zigmode", "0", CVAR_SERVERINFO | CVAR_LATCH);
 	instagib = gi.cvar("instagib", "0", CVAR_SERVERINFO | CVAR_LATCH);
 	chaingib = gi.cvar("chaingib", "0", CVAR_SERVERINFO | CVAR_LATCH);
+	chaingib_health_regen_delay = gi.cvar("chaingib_health_regen_delay", "3", CVAR_SERVERINFO | CVAR_ARCHIVE);
+	chaingib_health_regen_rate = gi.cvar("chaingib_health_regen_rate", "10", CVAR_SERVERINFO | CVAR_ARCHIVE);
+	chaingib_health_regen_cap = gi.cvar("chaingib_health_regen_cap", "100", CVAR_SERVERINFO | CVAR_ARCHIVE);
+	chaingib_ammo_regen_delay = gi.cvar("chaingib_ammo_regen_delay", "2", CVAR_SERVERINFO | CVAR_ARCHIVE);
+	chaingib_ammo_regen_rate = gi.cvar("chaingib_ammo_regen_rate", "10", CVAR_SERVERINFO | CVAR_ARCHIVE);
+	chaingib_ammo_spawn = gi.cvar("chaingib_ammo_spawn", "100", CVAR_SERVERINFO | CVAR_ARCHIVE);
+	chaingib_ammo_cap = gi.cvar("chaingib_ammo_cap", "200", CVAR_SERVERINFO | CVAR_ARCHIVE);
 	//game setup
 	zigintro = gi.cvar("zigintro", "0", CVAR_LATCH);
 	//ZOID

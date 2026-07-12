@@ -802,7 +802,11 @@ void InitClientPersistant (gclient_t *client)
 
 		client->pers.weapon = item;
 		client->pers.lastweapon = item;
-		client->pers.inventory[ITEM_INDEX(FindItem("Bullets"))] = 200;
+		int ammo_cap = chaingib_ammo_cap->value > 0 ? (int)chaingib_ammo_cap->value : 0;
+		int spawn_ammo = chaingib_ammo_spawn->value > 0 ? (int)chaingib_ammo_spawn->value : 0;
+		if (spawn_ammo > ammo_cap)
+			spawn_ammo = ammo_cap;
+		client->pers.inventory[ITEM_INDEX(FindItem("Bullets"))] = spawn_ammo;
 		client->pers.inventory[ITEM_INDEX(FindItem("Body Armor"))] = 100;
 	} else {
 		item = FindItem("Blaster");
@@ -840,6 +844,63 @@ void InitClientPersistant (gclient_t *client)
 	client->pers.max_trap = 5;
 
 	client->pers.connected = true;
+}
+
+void ChaingibResetRegeneration (gclient_t *client)
+{
+	client->chaingib_last_fire_time = level.time;
+	client->chaingib_last_damage_time = level.time;
+	client->chaingib_health_regen_progress = 0;
+	client->chaingib_ammo_regen_progress = 0;
+}
+
+void ChaingibApplyRegeneration (edict_t *ent)
+{
+	gclient_t *client = ent->client;
+	int health_cap, ammo_cap, ammo_index, amount;
+	float delay, rate;
+
+	if (!chaingib || !chaingib->value || !client || ent->health <= 0 ||
+	    client->resp.spectator || ent->movetype == MOVETYPE_NOCLIP || level.intermissiontime)
+		return;
+
+	health_cap = chaingib_health_regen_cap->value > 0 ? (int)chaingib_health_regen_cap->value : 0;
+	if (health_cap > ent->max_health)
+		health_cap = ent->max_health;
+	delay = chaingib_health_regen_delay->value > 0 ? chaingib_health_regen_delay->value : 0;
+	rate = chaingib_health_regen_rate->value > 0 ? chaingib_health_regen_rate->value : 0;
+	if (ent->health < health_cap && rate > 0 &&
+	    level.time - client->chaingib_last_fire_time >= delay &&
+	    level.time - client->chaingib_last_damage_time >= delay) {
+		client->chaingib_health_regen_progress += rate * FRAMETIME;
+		amount = (int)client->chaingib_health_regen_progress;
+		if (amount > 0) {
+			ent->health += amount;
+			if (ent->health > health_cap)
+				ent->health = health_cap;
+			client->chaingib_health_regen_progress -= amount;
+		}
+	} else if (ent->health >= health_cap) {
+		client->chaingib_health_regen_progress = 0;
+	}
+
+	ammo_cap = chaingib_ammo_cap->value > 0 ? (int)chaingib_ammo_cap->value : 0;
+	ammo_index = ITEM_INDEX(FindItem("Bullets"));
+	delay = chaingib_ammo_regen_delay->value > 0 ? chaingib_ammo_regen_delay->value : 0;
+	rate = chaingib_ammo_regen_rate->value > 0 ? chaingib_ammo_regen_rate->value : 0;
+	if (client->pers.inventory[ammo_index] < ammo_cap && rate > 0 &&
+	    level.time - client->chaingib_last_fire_time >= delay) {
+		client->chaingib_ammo_regen_progress += rate * FRAMETIME;
+		amount = (int)client->chaingib_ammo_regen_progress;
+		if (amount > 0) {
+			client->pers.inventory[ammo_index] += amount;
+			if (client->pers.inventory[ammo_index] > ammo_cap)
+				client->pers.inventory[ammo_index] = ammo_cap;
+			client->chaingib_ammo_regen_progress -= amount;
+		}
+	} else if (client->pers.inventory[ammo_index] >= ammo_cap) {
+		client->chaingib_ammo_regen_progress = 0;
+	}
 }
 
 
@@ -1542,6 +1603,7 @@ void PutClientInServer (edict_t *ent)
 
 	// copy some data from the client to the entity
 	FetchClientEntData(ent);
+	ChaingibResetRegeneration(client);
 
 	// clear entity values
 	ent->groundentity = NULL;
@@ -2691,6 +2753,8 @@ void ClientBeginServerFrame (edict_t *ent)
 		}
 		return;
 	}
+
+	ChaingibApplyRegeneration(ent);
 
 	// add player trail so monsters can follow
 	if (!deathmatch->value)

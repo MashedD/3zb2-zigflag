@@ -442,7 +442,11 @@ void PutBotInServer (edict_t *ent)
 		item = FindItem("Chaingun");
 		if (!item)
 			gi.error("No Chaingun item found");
-		client->pers.inventory[ITEM_INDEX(FindItem("Bullets"))] = 200;
+		int ammo_cap = chaingib_ammo_cap->value > 0 ? (int)chaingib_ammo_cap->value : 0;
+		int spawn_ammo = chaingib_ammo_spawn->value > 0 ? (int)chaingib_ammo_spawn->value : 0;
+		if (spawn_ammo > ammo_cap)
+			spawn_ammo = ammo_cap;
+		client->pers.inventory[ITEM_INDEX(FindItem("Bullets"))] = spawn_ammo;
 		client->pers.inventory[ITEM_INDEX(FindItem("Body Armor"))] = 100;
 	} else {
 		item = FindItem("Blaster");
@@ -494,6 +498,7 @@ void PutBotInServer (edict_t *ent)
 
 	ent->health = ent->client->pers.health;
 	ent->max_health = ent->client->pers.max_health;
+	ChaingibResetRegeneration(client);
 	ent->gib_health = -40;
 
 	ent->gravity = 1.0;

@@ -589,7 +589,8 @@ void Weapon_Generic2 (edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST
 	,ent->client->ammo_index);*/
 				//	,ent->client->pers.inventory[ITEM_INDEX(FindItem(ent->client->pers.weapon->ammo))]
 				//	);
-				NoAmmoWeaponChange(ent);
+				if (!(chaingib && chaingib->value))
+					NoAmmoWeaponChange(ent);
 			}
 		} else {
 			if (ent->client->ps.gunframe == FRAME_IDLE_LAST) {
@@ -1336,7 +1337,8 @@ void Chaingun_Fire (edict_t *ent)
 			gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
 			ent->pain_debounce_time = level.time + 1;
 		}
-		NoAmmoWeaponChange(ent);
+		if (!(chaingib && chaingib->value))
+			NoAmmoWeaponChange(ent);
 		return;
 	}
 
@@ -1363,6 +1365,12 @@ void Chaingun_Fire (edict_t *ent)
 		fire_bullet(ent, start, forward, damage, kick, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MOD_CHAINGUN);
 	}
 
+	if (chaingib && chaingib->value) {
+		ent->client->chaingib_last_fire_time = level.time;
+		ent->client->chaingib_health_regen_progress = 0;
+		ent->client->chaingib_ammo_regen_progress = 0;
+	}
+
 	// send muzzle flash
 	gi.WriteByte(svc_muzzleflash);
 	gi.WriteShort(ent - g_edicts);
@@ -1385,7 +1393,7 @@ void Chaingun_Fire (edict_t *ent)
 
 	// ### Hentai ### END
 
-	if (!((int)dmflags->value & DF_INFINITE_AMMO) && !(chaingib && chaingib->value))
+	if ((chaingib && chaingib->value) || !((int)dmflags->value & DF_INFINITE_AMMO))
 		ent->client->pers.inventory[ent->client->ammo_index] -= shots;
 }
 
