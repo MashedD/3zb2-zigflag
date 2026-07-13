@@ -84,6 +84,9 @@ typedef struct zgcl_s
 	int battlesubcnt;     //subcount
 	int battleduckcnt;    //duck
 	float fbattlecount;   //float temoporary count
+	float next_fire_time; //skill-scaled cadence for precision weapons
+	float combat_move_time; //next tactical movement decision
+	short combat_move_dir; //-1 left, 0 pause, 1 right
 	vec3_t vtemp;	      //temporary vec
 	int foundedenemy;     //foundedenemy
 	char secwep_selected; //secondweapon selected

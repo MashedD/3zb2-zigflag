@@ -110,6 +110,27 @@ bool BotApplyResistance (edict_t *ent)
 
 /* Prefer enemies that matter now instead of whichever client happens to be
  * visited first.  Large bonuses deliberately dominate the distance term. */
+static bool Bot_IsTeamMode (void)
+{
+	return tdm->value || ctf->value ||
+	       ((int)dmflags->value & (DF_MODELTEAMS | DF_SKINTEAMS));
+}
+
+static bool Bot_IsObjectiveCTF (void)
+{
+	return ctf->value && !tdm->value;
+}
+
+static bool Bot_ValidEnemy (edict_t *ent, edict_t *target)
+{
+	if (!target || !target->inuse || target == ent || !target->client ||
+	    target->deadflag || target->solid != SOLID_BBOX ||
+	    target->movetype == MOVETYPE_NOCLIP)
+		return false;
+
+	return !Bot_IsTeamMode() || !OnSameTeam(ent, target);
+}
+
 static float Bot_TargetPriority (edict_t *ent, edict_t *target, int own_flag_index)
 {
 	vec3_t delta;
@@ -123,10 +144,15 @@ static float Bot_TargetPriority (edict_t *ent, edict_t *target, int own_flag_ind
 		priority += 900.0f;
 
 	/* In objective modes, intercept the carrier before taking ordinary fights. */
-	if (ctf->value && own_flag_index >= 0 && target->client->pers.inventory[own_flag_index])
+	if (Bot_IsObjectiveCTF() && own_flag_index >= 0 && target->client->pers.inventory[own_flag_index])
 		priority += 2400.0f;
 	else if (!ctf->value && zflag_item && target->client->pers.inventory[ITEM_INDEX(zflag_item)])
 		priority += 1800.0f;
+
+	/* Help a nearby teammate who is already engaged. */
+	if (Bot_IsTeamMode() && target->client->zc.first_target &&
+	    OnSameTeam(ent, target->client->zc.first_target))
+		priority += 450.0f;
 
 	/* Finishing a weakened opponent is usually better than changing targets. */
 	if (target->health > 0 && target->health < 50)
@@ -175,8 +201,7 @@ int Bot_SearchEnemy (edict_t *ent)
 
 	tmpflg = false; //viewable flag
 	if (zc->first_target != NULL) {
-		if (zc->first_target->inuse && !zc->first_target->deadflag &&
-		    zc->first_target->client && Bot_trace(ent, zc->first_target)) {
+		if (Bot_ValidEnemy(ent, zc->first_target) && Bot_trace(ent, zc->first_target)) {
 			tmpflg = true;
 			foundedenemy++;
 			target = zc->first_target;
@@ -186,7 +211,7 @@ int Bot_SearchEnemy (edict_t *ent)
 	//	if(zc->ctfstate == CTFS_SUPPORTER) zc->ctfstate = CTFS_OFFENCER;
 
 	// blue or red?
-	if (ctf->value) {
+	if (Bot_IsObjectiveCTF()) {
 		if (ent->client->resp.ctf_team == CTF_TEAM1) {
 			k = ITEM_INDEX(FindItem("Blue Flag"));
 			own_flag_index = ITEM_INDEX(FindItem("Red Flag"));
@@ -208,7 +233,7 @@ int Bot_SearchEnemy (edict_t *ent)
 	else
 		j = -1;
 
-	if (ent->client->pers.inventory[ITEM_INDEX(zflag_item)]) {
+	if (zflag_item && ent->client->pers.inventory[ITEM_INDEX(zflag_item)]) {
 		ent->client->zc.tmplstate = TMS_LEADER;
 		ent->client->zc.followmate = NULL;
 	}
@@ -229,14 +254,19 @@ int Bot_SearchEnemy (edict_t *ent)
 			if (Bot_traceS(ent, trent)) {
 				VectorSubtract(trent->s.origin, ent->s.origin, trmin);
 				//not ctf mode and sameteam
-				if (!ctf->value && OnSameTeam(ent, trent)) {
-					if (trent->client->zc.first_target) {
-						if (Bot_traceS(ent, trent->client->zc.first_target))
+				if (!Bot_IsObjectiveCTF() && Bot_IsTeamMode() && OnSameTeam(ent, trent)) {
+					if (Bot_ValidEnemy(ent, trent->client->zc.first_target) &&
+					    Bot_traceS(ent, trent->client->zc.first_target)) {
+						float priority = Bot_TargetPriority(ent, trent->client->zc.first_target,
+						                                    own_flag_index) + 450.0f;
+						if (priority > best_priority) {
 							target = trent->client->zc.first_target;
+							best_priority = priority;
+						}
 					}
 					if (trmin[2] < JumpMax && VectorLength(trmin) < 400) {
 						yaw = (float)Bot[ent->client->zc.botindex].param[BOP_TEAMWORK];
-						if (trent->client->pers.inventory[ITEM_INDEX(zflag_item)]) {
+						if (zflag_item && trent->client->pers.inventory[ITEM_INDEX(zflag_item)]) {
 							trent->client->zc.tmplstate = TMS_LEADER;
 							trent->client->zc.followmate = NULL;
 							if ((9 * random()) < yaw) {
@@ -279,7 +309,7 @@ int Bot_SearchEnemy (edict_t *ent)
 							}
 						}
 					}
-				} else if (ctf->value && ent->client->resp.ctf_team == trent->client->resp.ctf_team) {
+				} else if (Bot_IsObjectiveCTF() && ent->client->resp.ctf_team == trent->client->resp.ctf_team) {
 					//have flag
 					if (trent->client->pers.inventory[k]) {
 						if (ent->client->zc.ctfstate == CTFS_OFFENCER) {
@@ -302,7 +332,7 @@ int Bot_SearchEnemy (edict_t *ent)
 						//							break;
 						//						}
 					}
-				} else {
+				} else if (Bot_ValidEnemy(ent, trent)) {
 					foundedenemy++;
 					{
 						bool in_view = false;
@@ -1488,6 +1518,19 @@ void Set_Combatstate (edict_t *ent, int foundedenemy)
 	if (combskill < 0 || combskill > 9)
 		combskill = 5;
 
+	/* Precision modes must honor each bot's configured reaction stat. */
+	if (instagib && instagib->value && target != client->zc.last_target) {
+		int reaction = Bot[client->zc.botindex].param[BOP_REACTION];
+		float acquisition_delay;
+
+		if (reaction > 9)
+			reaction = 9;
+		acquisition_delay = 0.65f - reaction * 0.055f;
+		if (acquisition_delay < 0.12f)
+			acquisition_delay = 0.12f;
+		client->zc.next_fire_time = level.time + acquisition_delay + random() * 0.12f;
+	}
+
 	//threat assessment (only when not already in a combat mode)
 	if (client->zc.battlemode == 0) {
 		int threatResult = Bot_AssessThreat(ent, target, foundedenemy, distance);
@@ -2639,7 +2682,9 @@ DCHCANC: //しゃがみっぱなし
 					if (!tdm_weps[tdm_k])
 						continue;
 					tdm_idx = ITEM_INDEX(tdm_weps[tdm_k]);
-					if (ent->client->pers.inventory[tdm_idx] && !tdm_team->client->pers.inventory[tdm_idx]) {
+					if (ent->client->pers.inventory[tdm_idx] > 1 &&
+					    ent->client->pers.weapon != tdm_weps[tdm_k] &&
+					    !tdm_team->client->pers.inventory[tdm_idx]) {
 						Drop_Item(ent, tdm_weps[tdm_k]);
 						ent->client->pers.inventory[tdm_idx]--;
 						tdm_dropped = true;
@@ -2959,7 +3004,7 @@ DCHCANC: //しゃがみっぱなし
 	}
 	//--------------------------------------------------------------------------------------
 	//search for items
-	if (!chedit->value && zc->second_target == NULL) {
+	if (!chedit->value && !(instagib && instagib->value) && zc->second_target == NULL) {
 		pickup_pri = false; //pickup priority off
 		k = false;
 
@@ -3289,8 +3334,8 @@ DCHCANC: //しゃがみっぱなし
 	}
 */
 	//チームプレイ時のルーチン
-	if (ctf->value || ((int)(dmflags->value) & (DF_MODELTEAMS | DF_SKINTEAMS))) {
-		if (ctf->value) {
+	if (Bot_IsTeamMode()) {
+		if (Bot_IsObjectiveCTF()) {
 			if (zc->ctfstate == CTFS_SUPPORTER) {
 				if (zc->followmate) {
 					if (zc->followmate->inuse)
@@ -3317,7 +3362,7 @@ DCHCANC: //しゃがみっぱなし
 				if (k || zc->route_trace)
 					zc->matelock = level.time + FRAMETIME * 5;
 				if (!zc->followmate->inuse || zc->followmate->deadflag || zc->matelock <= level.time) {
-					if (ctf->value)
+					if (Bot_IsObjectiveCTF())
 						zc->ctfstate = CTFS_OFFENCER;
 					else
 						zc->tmplstate = TMS_NONE;
@@ -3366,7 +3411,7 @@ DCHCANC: //しゃがみっぱなし
 					}
 				}
 			} else {
-				if (ctf->value)
+				if (Bot_IsObjectiveCTF())
 					zc->ctfstate = CTFS_OFFENCER;
 				else
 					zc->tmplstate = TMS_NONE;

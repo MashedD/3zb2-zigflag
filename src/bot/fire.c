@@ -2,6 +2,43 @@
 #include "../header/shared.h"
 #include "../header/player.h"
 
+static bool Bot_TeamCombat (void)
+{
+	return tdm->value || ctf->value ||
+	       ((int)dmflags->value & (DF_MODELTEAMS | DF_SKINTEAMS));
+}
+
+/* Check the actual firing corridor, not only player-to-player visibility. */
+static bool Bot_ClearShot (edict_t *ent, edict_t *target, bool explosive)
+{
+	vec3_t start, end, forward;
+	trace_t tr;
+
+	AngleVectors(ent->s.angles, forward, NULL, NULL);
+	VectorCopy(ent->s.origin, start);
+	start[2] += ent->viewheight - 8;
+	VectorMA(start, 8, forward, start);
+	if (explosive) {
+		VectorCopy(target->s.origin, end);
+		end[2] += target->viewheight * 0.5f;
+	} else {
+		VectorMA(start, 8192, forward, end);
+	}
+
+	tr = gi.trace(start, NULL, NULL, end, ent, MASK_SHOT);
+	if (tr.ent && tr.ent->client && Bot_TeamCombat() && OnSameTeam(ent, tr.ent))
+		return false;
+	if (!explosive)
+		return true;
+
+	/* Refuse splash shots that detonate beside the bot or a teammate. */
+	if (tr.fraction < 0.18f)
+		return false;
+	if (tr.ent && tr.ent != target && tr.ent->client)
+		return false;
+	return true;
+}
+
 //======================================================================
 //aim決定
 //ent	entity
@@ -15,6 +52,34 @@ void Get_AimAngle (edict_t *ent, float aim, float dist, int weapon)
 	trace_t rs_trace;
 
 	target = ent->client->zc.first_target;
+
+	/* Instagib is hitscan: track the body with skill-scaled, persistent error.
+	 * Do not lead velocity as if the rail projectile had travel time. */
+	if (instagib && instagib->value && weapon == WEAP_RAILGUN) {
+		int aim_skill = Bot[ent->client->zc.botindex].param[BOP_AIM];
+		float miss_skill;
+		float yaw_error;
+		float pitch_error;
+		float phase = level.time * 2.1f + ent->client->zc.botindex * 0.73f;
+
+		if (aim_skill > 9)
+			aim_skill = 9;
+		miss_skill = 9.0f - aim_skill;
+		/* Angular error matters at every range.  At skill 5 this is large
+		 * enough to miss a player regularly instead of remaining inside the
+		 * bounding box as the old world-unit offset did. */
+		yaw_error = 0.12f + miss_skill * 0.55f;
+		pitch_error = 0.08f + miss_skill * 0.38f;
+
+		VectorCopy(target->s.origin, targaim);
+		targaim[2] += target->viewheight * 0.45f;
+		VectorSubtract(targaim, ent->s.origin, targaim);
+		ent->s.angles[YAW] = Get_yaw(targaim);
+		ent->s.angles[PITCH] = Get_pitch(targaim);
+		ent->s.angles[YAW] += sinf(phase) * yaw_error;
+		ent->s.angles[PITCH] += cosf(phase * 0.79f) * pitch_error;
+		return;
+	}
 
 	switch (weapon) {
 		//即判定
@@ -572,7 +637,7 @@ bool B_UsePhalanx (edict_t *ent, edict_t *target, int enewep, float aim, float d
 				return true;
 			}
 		}
-		if (Bot_traceS(ent, target))
+		if (Bot_traceS(ent, target) && Bot_ClearShot(ent, target, true))
 			client->buttons |= BUTTON_ATTACK;
 		return true;
 	}
@@ -637,7 +702,7 @@ bool B_UseRocket (edict_t *ent, edict_t *target, int enewep, float aim, float di
 				return true;
 			}
 		}
-		if (Bot_traceS(ent, target))
+		if (Bot_traceS(ent, target) && Bot_ClearShot(ent, target, true))
 			client->buttons |= BUTTON_ATTACK;
 		return true;
 	}
@@ -681,9 +746,30 @@ bool B_UseRailgun (edict_t *ent, edict_t *target, int enewep, float aim, float d
 	client = ent->client;
 
 	if (CanUsewep(ent, WEAP_RAILGUN)) {
+		int aim_skill = Bot[client->zc.botindex].param[BOP_AIM];
+		int reaction_skill = Bot[client->zc.botindex].param[BOP_REACTION];
+		int combat_skill = Bot[client->zc.botindex].param[BOP_COMBATSKILL];
+
+		if (aim_skill > 9)
+			aim_skill = 9;
+		if (reaction_skill > 9)
+			reaction_skill = 9;
+		if (combat_skill > 9)
+			combat_skill = 9;
 		mywep = Get_KindWeapon(client->pers.weapon);
 		Get_AimAngle(ent, aim, distance, mywep);
-		client->buttons |= BUTTON_ATTACK;
+		if (Bot_ClearShot(ent, target, false)) {
+			if (!(instagib && instagib->value) || level.time >= client->zc.next_fire_time) {
+				client->buttons |= BUTTON_ATTACK;
+				if (instagib && instagib->value) {
+					float delay = 0.62f - reaction_skill * 0.025f - combat_skill * 0.015f;
+					float hesitation = (9 - aim_skill) * 0.018f;
+					if (delay < 0.24f)
+						delay = 0.24f;
+					client->zc.next_fire_time = level.time + delay + random() * (0.08f + hesitation);
+				}
+			}
+		}
 		if (trace_priority < TRP_ANGLEKEEP)
 			trace_priority = TRP_ANGLEKEEP;
 		return true;
@@ -726,7 +812,8 @@ bool B_UseGrenadeLauncher (edict_t *ent, edict_t *target, int enewep, float aim,
 				return true;
 			}
 		}
-		client->buttons |= BUTTON_ATTACK;
+		if (distance >= 140 && Bot_ClearShot(ent, target, true))
+			client->buttons |= BUTTON_ATTACK;
 		if (trace_priority < TRP_ANGLEKEEP)
 			trace_priority = TRP_ANGLEKEEP;
 		return true;
@@ -1684,7 +1771,34 @@ FIRED:
 	if (zc->secwep_selected == 2)
 		zc->secwep_selected = 1;
 
-	if (Bot[zc->botindex].param[BOP_DODGE] && ent->groundentity && !ent->waterlevel && trace_priority < TRP_MOVEKEEP && skill >= 5) {
+	if (instagib && instagib->value && Bot[zc->botindex].param[BOP_DODGE] &&
+	    ent->groundentity && !ent->waterlevel && trace_priority < TRP_MOVEKEEP) {
+		if (level.time >= zc->combat_move_time) {
+			float hold = 0.22f + random() * 0.38f;
+
+			zc->combat_move_time = level.time + hold;
+			if (random() < 0.12f + (9 - skill) * 0.015f)
+				zc->combat_move_dir = 0;
+			else if (!zc->combat_move_dir || random() < 0.65f)
+				zc->combat_move_dir = (random() < 0.5f) ? -1 : 1;
+			else
+				zc->combat_move_dir = -zc->combat_move_dir;
+		}
+
+		if (zc->combat_move_dir) {
+			zc->moveyaw = ent->s.angles[YAW] + 90.0f * zc->combat_move_dir;
+			if (zc->moveyaw > 180.0f)
+				zc->moveyaw -= 360.0f;
+			else if (zc->moveyaw < -180.0f)
+				zc->moveyaw += 360.0f;
+			trace_priority = TRP_MOVEKEEP;
+
+			if (skill >= 6 && random() < 0.025f && !(client->ps.pmove.pm_flags & PMF_DUCKED))
+				ent->velocity[2] += VEL_BOT_JUMP;
+		} else {
+			ent->moveinfo.speed = 0;
+		}
+	} else if (Bot[zc->botindex].param[BOP_DODGE] && ent->groundentity && !ent->waterlevel && trace_priority < TRP_MOVEKEEP && skill >= 5) {
 		// fbattlecount encodes direction + next-switch time:
 		//   > 0  → strafe right, switch when level.time >= fbattlecount
 		//   < 0  → strafe left,  switch when level.time >= -fbattlecount
