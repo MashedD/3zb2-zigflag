@@ -134,10 +134,14 @@ static bool Bot_ValidEnemy (edict_t *ent, edict_t *target)
 static float Bot_TargetPriority (edict_t *ent, edict_t *target, int own_flag_index)
 {
 	vec3_t delta;
-	float priority;
+	float distance, priority;
+	int my_weapon, enemy_weapon;
 
 	VectorSubtract(target->s.origin, ent->s.origin, delta);
-	priority = 1200.0f - VectorLength(delta);
+	distance = VectorLength(delta);
+	priority = 1200.0f - distance;
+	my_weapon = Get_KindWeapon(ent->client->pers.weapon);
+	enemy_weapon = Get_KindWeapon(target->client->pers.weapon);
 
 	/* Someone actively fighting us is more urgent than a passer-by. */
 	if (target->client->zc.first_target == ent)
@@ -158,7 +162,42 @@ static float Bot_TargetPriority (edict_t *ent, edict_t *target, int own_flag_ind
 	if (target->health > 0 && target->health < 50)
 		priority += 200.0f;
 
+	/* Prefer threats that can actually hurt us now, without granting bots
+	 * knowledge of players outside their normal sight/noise checks. */
+	if (target->client->weaponstate == WEAPON_FIRING)
+		priority += 160.0f;
+	if (enemy_weapon >= WEAP_ROCKETLAUNCHER && enemy_weapon > my_weapon)
+		priority += 90.0f;
+	if (distance < 220.0f && ent->health < 50)
+		priority += 120.0f;
+
 	return priority;
+}
+
+static int Bot_SharedAmmoReserve (edict_t *ent, gitem_t *donated, gitem_t *ammo)
+{
+	gitem_t *weapons[] = {
+		Fdi_SHOTGUN, Fdi_SUPERSHOTGUN, Fdi_MACHINEGUN, Fdi_CHAINGUN,
+		Fdi_GRENADELAUNCHER, Fdi_ROCKETLAUNCHER, Fdi_HYPERBLASTER,
+		Fdi_RAILGUN, Fdi_BFG
+	};
+	int i, reserve = 0;
+
+	for (i = 0; i < (int)(sizeof(weapons) / sizeof(weapons[0])); i++) {
+		gitem_t *weapon = weapons[i];
+		gitem_t *weapon_ammo;
+		int needed;
+		if (!weapon || weapon == donated || !weapon->ammo || !weapon->ammo[0] ||
+		    !ent->client->pers.inventory[ITEM_INDEX(weapon)])
+			continue;
+		weapon_ammo = FindItem(weapon->ammo);
+		if (weapon_ammo != ammo)
+			continue;
+		needed = weapon->quantity * 2;
+		if (needed > reserve)
+			reserve = needed;
+	}
+	return reserve;
 }
 
 //return foundedenemy
@@ -317,13 +356,17 @@ int Bot_SearchEnemy (edict_t *ent)
 							ent->client->zc.followmate = trent;
 						}
 						// if carrier have enemy
-						if (trent->client->zc.first_target != NULL) {
-							if (trent->client->zc.first_target->classname[0] == 'p') {
+						if (Bot_ValidEnemy(ent, trent->client->zc.first_target) &&
+						    Bot_traceS(ent, trent->client->zc.first_target)) {
+							float priority = Bot_TargetPriority(ent, trent->client->zc.first_target,
+							                                    own_flag_index) + 700.0f;
+							if (priority > best_priority) {
 								target = trent->client->zc.first_target;
+								best_priority = priority;
 							}
 						}
 						// if carrier tracing route
-						if (trent->client->zc.route_trace && (trent->client->zc.routeindex - 2) > CurrentIndex) {
+						if (trent->client->zc.route_trace && (trent->client->zc.routeindex - 2) > 0) {
 							zc->routeindex = trent->client->zc.routeindex - 2;
 						}
 						//						ent->s.angles[YAW] = Get_yaw (trmin);
@@ -369,16 +412,26 @@ int Bot_SearchEnemy (edict_t *ent)
 								VectorSubtract(trent->mynoise->s.origin, ent->s.origin, trmin);
 								if (VectorLength(trmin) < 300) {
 									pitch = (float)Bot[ent->client->zc.botindex].param[BOP_REACTION];
-									if ((9 * random()) < pitch)
-										target = trent;
+									if ((9 * random()) < pitch) {
+										float priority = Bot_TargetPriority(ent, trent, own_flag_index) - 250.0f;
+										if (priority > best_priority) {
+											target = trent;
+											best_priority = priority;
+										}
+									}
 								}
 							}
 							if (target == NULL && trent->mynoise2->teleport_time >= (level.time - FRAMETIME)) {
 								VectorSubtract(trent->mynoise2->s.origin, ent->s.origin, trmin);
 								if (VectorLength(trmin) < 100) {
 									pitch = (float)Bot[ent->client->zc.botindex].param[BOP_REACTION];
-									if ((9 * random()) < pitch)
-										target = trent;
+									if ((9 * random()) < pitch) {
+										float priority = Bot_TargetPriority(ent, trent, own_flag_index) - 300.0f;
+										if (priority > best_priority) {
+											target = trent;
+											best_priority = priority;
+										}
+									}
 								}
 							}
 						}
@@ -531,6 +584,11 @@ void Bot_SearchItems (edict_t *ent)
 			}
 
 			if (!trent->inuse)
+				continue;
+			/* Team donations are reserved for the human they were dropped for.
+			 * Bots must not route back to and reclaim them. */
+			if (trent->owner && ENT_IS_BOT(trent->owner) && trent->target_ent &&
+			    !ENT_IS_BOT(trent->target_ent))
 				continue;
 			if (trent->solid != SOLID_TRIGGER) {
 				if (ent->client->weaponstate == WEAPON_READY && !ent->client->zc.route_trace) {
@@ -2646,8 +2704,6 @@ DCHCANC: //しゃがみっぱなし
 	//	if(ent->client->ctf_grapple && !(ent->client->buttons & BUTTON_ATTACK)) {}
 	//	else
 	Set_Combatstate(ent, foundedenemy);
-	if (trace_priority == TRP_ALLKEEP)
-		goto VCHCANSEL;
 
 	// TDM weapon sharing - drop extra weapons for nearby teammates
 	if (tdm->value || ctf->value) {
@@ -2664,10 +2720,8 @@ DCHCANC: //しゃがみっぱなし
 				continue;
 			if (tdm_team->movetype == MOVETYPE_NOCLIP)
 				continue;
-			if (!OnSameTeam(ent, tdm_team)) {
-				if (ent->client->resp.ctf_team >= CTF_TEAM1 && tdm_team->client->resp.ctf_team >= CTF_TEAM1 && ent->client->resp.ctf_team != tdm_team->client->resp.ctf_team)
-					continue;
-			}
+			if (!OnSameTeam(ent, tdm_team))
+				continue;
 
 			VectorSubtract(tdm_team->s.origin, ent->s.origin, v);
 			if (VectorLength(v) > 400)
@@ -2682,10 +2736,13 @@ DCHCANC: //しゃがみっぱなし
 					if (!tdm_weps[tdm_k])
 						continue;
 					tdm_idx = ITEM_INDEX(tdm_weps[tdm_k]);
-					if (ent->client->pers.inventory[tdm_idx] > 1 &&
+					if (ent->client->pers.inventory[tdm_idx] > 0 &&
 					    ent->client->pers.weapon != tdm_weps[tdm_k] &&
 					    !tdm_team->client->pers.inventory[tdm_idx]) {
-						Drop_Item(ent, tdm_weps[tdm_k]);
+						{
+							edict_t *dropped_weapon = Drop_Item(ent, tdm_weps[tdm_k]);
+							dropped_weapon->target_ent = tdm_team;
+						}
 						ent->client->pers.inventory[tdm_idx]--;
 						tdm_dropped = true;
 
@@ -2694,10 +2751,17 @@ DCHCANC: //しゃがみっぱなし
 							gitem_t *ammo = FindItem(tdm_weps[tdm_k]->ammo);
 							if (ammo && ammo != tdm_weps[tdm_k] && ammo->drop) {
 								int ammo_idx = ITEM_INDEX(ammo);
-								if (ent->client->pers.inventory[ammo_idx] >= ammo->quantity)
-									ammo->drop(ent, ammo);
+								int reserve = Bot_SharedAmmoReserve(ent, tdm_weps[tdm_k], ammo);
+								int available = ent->client->pers.inventory[ammo_idx] - reserve;
+								if (available > 0) {
+									edict_t *dropped_ammo = Drop_Item(ent, ammo);
+									dropped_ammo->count = available < ammo->quantity ? available : ammo->quantity;
+									dropped_ammo->target_ent = tdm_team;
+									ent->client->pers.inventory[ammo_idx] -= dropped_ammo->count;
+								}
 							}
 						}
+						break;
 					}
 				}
 			}
@@ -2705,6 +2769,8 @@ DCHCANC: //しゃがみっぱなし
 				break;
 		}
 	}
+	if (trace_priority == TRP_ALLKEEP)
+		goto VCHCANSEL;
 
 	//--------------------------------------------------------------------------------------
 	//brause target status

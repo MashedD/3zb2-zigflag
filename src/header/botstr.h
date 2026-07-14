@@ -102,6 +102,7 @@ typedef struct zgcl_s
 	//team
 	short tmplstate;     //teamplay state
 	short ctfstate;	     //ctf state
+	float ctf_role_time; //earliest time a non-carrier role may be reassigned
 	edict_t *followmate; //follow
 	float matelock;	     //team mate locking time
 } zgcl_t;

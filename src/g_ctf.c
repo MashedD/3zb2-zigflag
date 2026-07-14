@@ -3091,80 +3091,67 @@ void SpawnExtra (vec3_t position, char *classname)
 	}
 }
 
-void CTFJobAssign (void)
+static void CTFJobAssignTeam (int team, gitem_t *enemy_flag)
 {
-	int i;
-	int defend1, defend2; //ディフェンダー総数
-	int mate1, mate2;     //チームメイト総数
-	gclient_t *client;
-	edict_t *e;
-	edict_t *defei1, *defei2; //候補
-	edict_t *geti1, *geti2;	  //候補
+	int i, bots = 0, defenders = 0, desired;
+	edict_t *best_defender = NULL, *best_attacker = NULL;
+	int lowest_offence = 10, highest_offence = -1;
 
-	defend1 = 0;
-	defend2 = 0;
-	mate1 = 0;
-	mate2 = 0;
-	defei1 = NULL;
-	defei2 = NULL;
-	geti1 = NULL;
-	geti2 = NULL;
+	for (i = 1; i <= (int)maxclients->value; i++) {
+		edict_t *bot = &g_edicts[i];
+		gclient_t *client;
+		int offence;
 
-	e = &g_edicts[(int)maxclients->value];
-	for (i = maxclients->value; i >= 1; i--, e--) {
-		if (e->inuse) {
-			client = e->client;
-			if (client->zc.ctfstate == CTFS_NONE)
-				client->zc.ctfstate = CTFS_DEFENDER;
-			//if(client->zc.ctfstate == CTFS_CARRIER)
-			//gi.bprintf(PRINT_HIGH,"I am carrierY!!\n");
-			if (e->client->resp.ctf_team == CTF_TEAM1) {
-				mate1++;
-				if (e->client->pers.inventory[ITEM_INDEX(FindItem("Blue Flag"))]) {
-					client->zc.ctfstate = CTFS_CARRIER;
-				}
-				if (1 /*e->svflags & SVF_MONSTER*/) {
-					if (client->zc.ctfstate == CTFS_OFFENCER && random() > 0.7)
-						defei1 = e;
-					else if (client->zc.ctfstate == CTFS_DEFENDER) {
-						if (random() > 0.7)
-							geti1 = e;
-						defend1++;
-					} else if (client->zc.ctfstate == CTFS_CARRIER)
-						defend1++;
-				}
-			} else if (e->client->resp.ctf_team == CTF_TEAM2) {
-				mate2++;
-				if (e->client->pers.inventory[ITEM_INDEX(FindItem("Red Flag"))]) {
-					client->zc.ctfstate = CTFS_CARRIER;
-				}
-				if (1 /*e->svflags & SVF_MONSTER*/) {
-					if (client->zc.ctfstate == CTFS_OFFENCER && random() > 0.8)
-						defei2 = e;
-					else if (client->zc.ctfstate == CTFS_DEFENDER) {
-						if (random() > 0.7)
-							geti2 = e;
-						defend2++;
-					} else if (client->zc.ctfstate == CTFS_CARRIER)
-						defend2++;
-				}
-			}
+		if (!bot->inuse || !ENT_IS_BOT(bot) || bot->client->resp.ctf_team != team)
+			continue;
+		client = bot->client;
+		bots++;
+
+		if (enemy_flag && client->pers.inventory[ITEM_INDEX(enemy_flag)]) {
+			client->zc.ctfstate = CTFS_CARRIER;
+			client->zc.followmate = NULL;
+			continue;
+		}
+		if (client->zc.ctfstate == CTFS_CARRIER) {
+			client->zc.ctfstate = CTFS_OFFENCER;
+			client->zc.ctf_role_time = level.time + 3.0f;
+		}
+		if (client->zc.ctfstate == CTFS_NONE)
+			client->zc.ctfstate = CTFS_OFFENCER;
+		if (client->zc.ctfstate == CTFS_DEFENDER)
+			defenders++;
+
+		if (client->zc.ctf_role_time > level.time || client->zc.ctfstate == CTFS_SUPPORTER)
+			continue;
+		offence = Bot[client->zc.botindex].param[BOP_OFFENCE];
+		if (client->zc.ctfstate != CTFS_DEFENDER && offence < lowest_offence) {
+			lowest_offence = offence;
+			best_defender = bot;
+		}
+		if (client->zc.ctfstate == CTFS_DEFENDER && offence > highest_offence) {
+			highest_offence = offence;
+			best_attacker = bot;
 		}
 	}
 
-	if (defend1 < mate1 / 3 && mate1 >= 2) {
-		if (defei1 != NULL)
-			defei1->client->zc.ctfstate = CTFS_DEFENDER;
-	} else if (defend1 > mate1 / 3) {
-		if (geti1 != NULL)
-			geti1->client->zc.ctfstate = CTFS_OFFENCER;
+	/* Keep a small team attacking; larger teams reserve roughly one third for
+	 * defense.  Change at most one role per update and lock it for five seconds. */
+	desired = bots >= 2 ? bots / 3 : 0;
+	if (bots >= 2 && desired < 1)
+		desired = 1;
+	if (defenders < desired && best_defender) {
+		best_defender->client->zc.ctfstate = CTFS_DEFENDER;
+		best_defender->client->zc.ctf_role_time = level.time + 5.0f;
+		best_defender->client->zc.followmate = NULL;
+	} else if (defenders > desired && best_attacker) {
+		best_attacker->client->zc.ctfstate = CTFS_OFFENCER;
+		best_attacker->client->zc.ctf_role_time = level.time + 5.0f;
+		best_attacker->client->zc.followmate = NULL;
 	}
-	if (defend2 < mate2 / 3 && mate2 >= 2) {
-		if (defei2 != NULL)
-			defei2->client->zc.ctfstate = CTFS_DEFENDER;
-	} else if (defend2 > mate2 / 3) {
-		if (geti2 != NULL)
-			geti2->client->zc.ctfstate = CTFS_OFFENCER;
-	}
-	///	gi.bprintf(PRINT_HIGH,"Called!!!!\n");
+}
+
+void CTFJobAssign (void)
+{
+	CTFJobAssignTeam(CTF_TEAM1, FindItem("Blue Flag"));
+	CTFJobAssignTeam(CTF_TEAM2, FindItem("Red Flag"));
 }

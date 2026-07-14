@@ -957,6 +957,11 @@ void Touch_Item (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf
 	}
 	if (strcmp(other->classname, "player"))
 		return;
+	/* Bot team donations use target_ent as their intended human recipient.
+	 * Do not let the owner or another bot immediately take the package back. */
+	if (ent->owner && ENT_IS_BOT(ent->owner) && ent->target_ent &&
+	    !ENT_IS_BOT(ent->target_ent) && other != ent->target_ent)
+		return;
 	if (ent->classname[0] == 'R') {
 		if (!(other->svflags & SVF_MONSTER))
 			return;
