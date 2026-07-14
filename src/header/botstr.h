@@ -114,6 +114,8 @@ typedef struct zgcl_s
 	short ai_reason;      //bot_reason_t explaining the selected goal
 	float ai_goal_score;
 	float target_seen_time;
+	vec3_t target_last_seen_pos;
+	bool target_visible;
 	float target_switch_time;
 	float target_acquire_time;
 	vec3_t vtemp;	      //temporary vec

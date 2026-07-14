@@ -46,6 +46,7 @@ endif()
 set(3zb2-Source
 	src/bot/fire.c
 	src/bot/func.c
+	src/bot/policy.c
 	src/bot/za.c
 	src/bot/bot.c
 	src/g_chase.c
@@ -84,6 +85,7 @@ set(3zb2-Header
 	src/header/menu.h
 	src/header/player.h
 	src/header/shared.h
+	src/bot/policy.h
 	)
 
 # Build the 3zb2 dynamic library
@@ -94,3 +96,8 @@ set_target_properties(game PROPERTIES
 	LIBRARY_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/release
 )
 target_link_libraries(game ${3zb2LinkerFlags})
+
+enable_testing()
+add_executable(bot_policy_test tests/bot_policy_test.c src/bot/policy.c)
+target_include_directories(bot_policy_test PRIVATE src/bot)
+add_test(NAME bot_policy COMMAND bot_policy_test)

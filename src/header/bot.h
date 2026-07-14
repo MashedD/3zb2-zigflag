@@ -44,6 +44,7 @@ int Bot_moveT (edict_t *ent, float ryaw, vec3_t pos, float dist, float *bottom);
 void Set_BotAnim (edict_t *ent, int anim, int frame, int end);
 void plat_go_up (edict_t *ent);
 int Get_KindWeapon (gitem_t *it);
+void Bot_ValidateAttack (edict_t *ent);
 bool TargetJump (edict_t *ent, vec3_t tpos);
 bool Bot_traceS (edict_t *ent, edict_t *other);
 bool Bot_Fall (edict_t *ent, vec3_t pos, float dist);

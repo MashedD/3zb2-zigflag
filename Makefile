@@ -128,7 +128,7 @@ endif
 # ----------
 
 # Phony targets
-.PHONY : all clean 3zb2
+.PHONY : all clean 3zb2 test
 
 # ----------
 
@@ -168,6 +168,7 @@ build/%.o: %.c
 	src/bot/bot.o \
 	src/bot/fire.o \
 	src/bot/func.o \
+	src/bot/policy.o \
 	src/bot/za.o \
 	src/g_chase.o \
 	src/g_cmds.o \
@@ -225,3 +226,11 @@ release/game.so : $(3ZB2_OBJS)
 	@echo "===> LD $@"
 	${Q}$(CC) $(LDFLAGS) -o $@ $(3ZB2_OBJS)
 endif
+
+build/tests/bot_policy_test: tests/bot_policy_test.c src/bot/policy.c src/bot/policy.h
+	@echo "===> TEST bot policy"
+	${Q}mkdir -p $(@D)
+	${Q}$(CC) $(CFLAGS) -Isrc/bot -o $@ tests/bot_policy_test.c src/bot/policy.c
+
+test: build/tests/bot_policy_test
+	${Q}build/tests/bot_policy_test

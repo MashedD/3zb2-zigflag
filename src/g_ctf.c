@@ -1,5 +1,6 @@
 #include "header/local.h"
 #include "header/bot.h"
+#include "bot/policy.h"
 //PON
 bool bots_moveok (edict_t *ent, float ryaw, vec3_t pos, float dist, float *bottom);
 //PON
@@ -3093,9 +3094,12 @@ void SpawnExtra (vec3_t position, char *classname)
 
 static void CTFJobAssignTeam (int team, gitem_t *enemy_flag)
 {
-	int i, bots = 0, defenders = 0, desired;
-	edict_t *best_defender = NULL, *best_attacker = NULL;
+	int i, bots = 0, defenders = 0, supporters = 0;
+	edict_t *best_defender = NULL, *best_attacker = NULL, *best_supporter = NULL;
+	edict_t *carrier = NULL, *extra_supporter = NULL;
 	int lowest_offence = 10, highest_offence = -1;
+	int highest_teamwork = -1;
+	bot_policy_ctf_quota_t quota;
 
 	for (i = 1; i <= (int)maxclients->value; i++) {
 		edict_t *bot = &g_edicts[i];
@@ -3110,6 +3114,7 @@ static void CTFJobAssignTeam (int team, gitem_t *enemy_flag)
 		if (enemy_flag && client->pers.inventory[ITEM_INDEX(enemy_flag)]) {
 			client->zc.ctfstate = CTFS_CARRIER;
 			client->zc.followmate = NULL;
+			carrier = bot;
 			continue;
 		}
 		if (client->zc.ctfstate == CTFS_CARRIER) {
@@ -3120,8 +3125,12 @@ static void CTFJobAssignTeam (int team, gitem_t *enemy_flag)
 			client->zc.ctfstate = CTFS_OFFENCER;
 		if (client->zc.ctfstate == CTFS_DEFENDER)
 			defenders++;
+		if (client->zc.ctfstate == CTFS_SUPPORTER) {
+			supporters++;
+			extra_supporter = bot;
+		}
 
-		if (client->zc.ctf_role_time > level.time || client->zc.ctfstate == CTFS_SUPPORTER)
+		if (client->zc.ctf_role_time > level.time)
 			continue;
 		offence = Bot[client->zc.botindex].param[BOP_OFFENCE];
 		if (client->zc.ctfstate != CTFS_DEFENDER && offence < lowest_offence) {
@@ -3132,18 +3141,30 @@ static void CTFJobAssignTeam (int team, gitem_t *enemy_flag)
 			highest_offence = offence;
 			best_attacker = bot;
 		}
+		if (client->zc.ctfstate == CTFS_OFFENCER &&
+		    Bot[client->zc.botindex].param[BOP_TEAMWORK] > highest_teamwork) {
+			highest_teamwork = Bot[client->zc.botindex].param[BOP_TEAMWORK];
+			best_supporter = bot;
+		}
 	}
 
 	/* Keep a small team attacking; larger teams reserve roughly one third for
 	 * defense.  Change at most one role per update and lock it for five seconds. */
-	desired = bots >= 2 ? bots / 3 : 0;
-	if (bots >= 2 && desired < 1)
-		desired = 1;
-	if (defenders < desired && best_defender) {
+	quota = BotPolicy_CTFQuota(bots, carrier != NULL);
+	if (supporters < quota.supporters && best_supporter && carrier) {
+		best_supporter->client->zc.ctfstate = CTFS_SUPPORTER;
+		best_supporter->client->zc.ctf_role_time = level.time + 5.0f;
+		best_supporter->client->zc.followmate = carrier;
+	} else if (supporters > quota.supporters && extra_supporter &&
+	           extra_supporter->client->zc.ctf_role_time <= level.time) {
+		extra_supporter->client->zc.ctfstate = CTFS_OFFENCER;
+		extra_supporter->client->zc.ctf_role_time = level.time + 5.0f;
+		extra_supporter->client->zc.followmate = NULL;
+	} else if (defenders < quota.defenders && best_defender) {
 		best_defender->client->zc.ctfstate = CTFS_DEFENDER;
 		best_defender->client->zc.ctf_role_time = level.time + 5.0f;
 		best_defender->client->zc.followmate = NULL;
-	} else if (defenders > desired && best_attacker) {
+	} else if (defenders > quota.defenders && best_attacker) {
 		best_attacker->client->zc.ctfstate = CTFS_OFFENCER;
 		best_attacker->client->zc.ctf_role_time = level.time + 5.0f;
 		best_attacker->client->zc.followmate = NULL;

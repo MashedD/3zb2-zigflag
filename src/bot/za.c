@@ -1,6 +1,7 @@
 #include "../header/bot.h"
 #include "../header/shared.h"
 #include "../header/player.h"
+#include "policy.h"
 
 bool pickup_pri;
 
@@ -134,12 +135,14 @@ static bool Bot_ValidEnemy (edict_t *ent, edict_t *target)
 static float Bot_TargetPriority (edict_t *ent, edict_t *target, int own_flag_index, int *reason)
 {
 	vec3_t delta;
-	float distance, priority;
+	float distance;
 	int my_weapon, enemy_weapon;
+	bot_policy_target_t policy = {0};
 
 	VectorSubtract(target->s.origin, ent->s.origin, delta);
 	distance = VectorLength(delta);
-	priority = 1200.0f - distance;
+	policy.distance = distance;
+	policy.health = target->health;
 	if (reason)
 		*reason = BOT_REASON_NEAREST_THREAT;
 	my_weapon = Get_KindWeapon(ent->client->pers.weapon);
@@ -147,18 +150,18 @@ static float Bot_TargetPriority (edict_t *ent, edict_t *target, int own_flag_ind
 
 	/* Someone actively fighting us is more urgent than a passer-by. */
 	if (target->client->zc.first_target == ent) {
-		priority += 900.0f;
+		policy.attacks_me = true;
 		if (reason)
 			*reason = BOT_REASON_DIRECT_ATTACKER;
 	}
 
 	/* In objective modes, intercept the carrier before taking ordinary fights. */
 	if (Bot_IsObjectiveCTF() && own_flag_index >= 0 && target->client->pers.inventory[own_flag_index]) {
-		priority += 2400.0f;
+		policy.objective_carrier = true;
 		if (reason)
 			*reason = BOT_REASON_OBJECTIVE_CARRIER;
 	} else if (!ctf->value && zflag_item && target->client->pers.inventory[ITEM_INDEX(zflag_item)]) {
-		priority += 1800.0f;
+		policy.objective_carrier = true;
 		if (reason)
 			*reason = BOT_REASON_OBJECTIVE_CARRIER;
 	}
@@ -166,14 +169,13 @@ static float Bot_TargetPriority (edict_t *ent, edict_t *target, int own_flag_ind
 	/* Help a nearby teammate who is already engaged. */
 	if (Bot_IsTeamMode() && target->client->zc.first_target &&
 	    OnSameTeam(ent, target->client->zc.first_target)) {
-		priority += 450.0f;
+		policy.assists_teammate = true;
 		if (reason && *reason == BOT_REASON_NEAREST_THREAT)
 			*reason = BOT_REASON_TEAM_ASSIST;
 	}
 
 	/* Finishing a weakened opponent is usually better than changing targets. */
 	if (target->health > 0 && target->health < 50) {
-		priority += 200.0f;
 		if (reason && *reason == BOT_REASON_NEAREST_THREAT)
 			*reason = BOT_REASON_WEAK_ENEMY;
 	}
@@ -181,19 +183,20 @@ static float Bot_TargetPriority (edict_t *ent, edict_t *target, int own_flag_ind
 	/* Prefer threats that can actually hurt us now, without granting bots
 	 * knowledge of players outside their normal sight/noise checks. */
 	if (target->client->weaponstate == WEAPON_FIRING)
-		priority += 160.0f;
+		policy.firing = true;
 	if (enemy_weapon >= WEAP_ROCKETLAUNCHER && enemy_weapon > my_weapon)
-		priority += 90.0f;
+		policy.weapon_advantage = true;
 	if (distance < 220.0f && ent->health < 50)
-		priority += 120.0f;
+		policy.close_while_vulnerable = true;
 
-	return priority;
+	return BotPolicy_TargetScore(&policy);
 }
 
 static float Bot_ItemPriority (edict_t *ent, edict_t *item, float distance, int *reason)
 {
 	const char *classname = item->classname ? item->classname : "";
-	float priority = 120.0f;
+	bot_policy_item_t policy = {0};
+	gitem_t *pickup_item = item->item;
 	int pickup = Bot[ent->client->zc.botindex].param[BOP_PICKUP];
 
 	if (reason)
@@ -201,41 +204,58 @@ static float Bot_ItemPriority (edict_t *ent, edict_t *item, float distance, int 
 	if (pickup > 9)
 		pickup = 9;
 
-	/* High-pickup personalities accept longer detours; all personalities still
-	 * compare candidates by travel cost instead of edict iteration order. */
-	priority -= distance * (0.38f - pickup * 0.025f);
+	policy.distance = distance;
+	policy.pickup_skill = pickup;
+	policy.kind = BOT_ITEM_ROAM;
 
-	if (!strncmp(classname, "item_health", 11)) {
-		priority += (100 - ent->health) * 5.0f;
-		if (strstr(classname, "mega"))
-			priority += 300.0f;
-	} else if (!strncmp(classname, "item_armor", 10)) {
-		priority += ent->health < 75 ? 360.0f : 220.0f;
-	} else if (!strncmp(classname, "weapon_", 7)) {
-		int weapon = item->item ? Get_KindWeapon(item->item) : 0;
+	if (pickup_item && (pickup_item->flags & IT_ARMOR)) {
+		int armor_index = ArmorIndex(ent);
+		int armor = armor_index ? ent->client->pers.inventory[armor_index] : 0;
+		gitem_armor_t *armor_info = pickup_item->info;
+		policy.kind = BOT_ITEM_ARMOR;
+		policy.need = armor_info && armor_info->max_count ?
+			(float)(armor_info->max_count - armor) / armor_info->max_count : 0.5f;
+		if (policy.need < 0)
+			policy.need = 0;
+		policy.effective_gain = armor_info ? armor_info->base_count : pickup_item->quantity;
+	} else if (pickup_item && (pickup_item->flags & IT_WEAPON)) {
+		int weapon = Get_KindWeapon(pickup_item);
 		int current = Get_KindWeapon(ent->client->pers.weapon);
-		priority += 420.0f + weapon * 20.0f;
-		if (weapon > current)
-			priority += 220.0f;
-		if (item->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM))
-			priority += 100.0f;
+		policy.kind = BOT_ITEM_WEAPON;
+		policy.weapon_upgrade = weapon > current;
+		policy.preferred_weapon = weapon == Bot[ent->client->zc.botindex].param[BOP_PRIWEP];
+		policy.dropped = (item->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM)) != 0;
 		if (reason)
 			*reason = BOT_REASON_ITEM_UPGRADE;
-	} else if (!strncmp(classname, "ammo_", 5)) {
-		priority += 180.0f;
+	} else if (pickup_item && (pickup_item->flags & IT_AMMO)) {
+		int inventory = ent->client->pers.inventory[ITEM_INDEX(pickup_item)];
+		int maximum = 0;
+		policy.kind = BOT_ITEM_AMMO;
+		if (pickup_item == Fdi_SHELLS) maximum = ent->client->pers.max_shells;
+		else if (pickup_item == Fdi_BULLETS) maximum = ent->client->pers.max_bullets;
+		else if (pickup_item == Fdi_GRENADES) maximum = ent->client->pers.max_grenades;
+		else if (pickup_item == Fdi_ROCKETS) maximum = ent->client->pers.max_rockets;
+		else if (pickup_item == Fdi_CELLS) maximum = ent->client->pers.max_cells;
+		else if (pickup_item == Fdi_SLUGS) maximum = ent->client->pers.max_slugs;
+		if (maximum > 0) {
+			policy.need = (float)(maximum - inventory) / maximum;
+			policy.effective_gain = pickup_item->quantity < maximum - inventory ?
+				pickup_item->quantity : maximum - inventory;
+		}
 	} else if (!strncmp(classname, "item_flag", 9) || !strncmp(classname, "ZB", 2)) {
-		priority += 1400.0f;
+		policy.kind = BOT_ITEM_OBJECTIVE;
 		if (reason)
 			*reason = BOT_REASON_OBJECTIVE_CARRIER;
-	} else if (!strncmp(classname, "item_quad", 9) ||
-	           !strncmp(classname, "item_invulnerability", 20) ||
-	           !strncmp(classname, "item_tech", 9)) {
-		priority += 700.0f;
-	} else if (classname[0] == 'R') {
-		priority += 40.0f;
+	} else if (pickup_item && (pickup_item->flags & (IT_POWERUP | IT_TECH))) {
+		policy.kind = BOT_ITEM_POWERUP;
+	} else if (!strncmp(classname, "item_health", 11)) {
+		int cap = strstr(classname, "mega") ? 200 : 100;
+		policy.kind = BOT_ITEM_HEALTH;
+		policy.need = ent->health < cap ? (float)(cap - ent->health) / cap : 0;
+		policy.effective_gain = item->count > 0 ? item->count : 10;
 	}
 
-	return priority;
+	return BotPolicy_ItemScore(&policy);
 }
 
 static bool Bot_CanDetourForItems (edict_t *ent)
@@ -388,7 +408,8 @@ int Bot_SearchEnemy (edict_t *ent)
 							selected_reason = reason;
 						}
 					}
-					if (trmin[2] < JumpMax && VectorLength(trmin) < 400) {
+					if (trmin[2] < JumpMax && VectorLength(trmin) < 400 &&
+					    zc->matelock <= level.time) {
 						yaw = (float)Bot[ent->client->zc.botindex].param[BOP_TEAMWORK];
 						if (zflag_item && trent->client->pers.inventory[ITEM_INDEX(zflag_item)]) {
 							trent->client->zc.tmplstate = TMS_LEADER;
@@ -438,11 +459,8 @@ int Bot_SearchEnemy (edict_t *ent)
 				} else if (Bot_IsObjectiveCTF() && ent->client->resp.ctf_team == trent->client->resp.ctf_team) {
 					//have flag
 					if (trent->client->pers.inventory[k]) {
-						if (ent->client->zc.ctfstate == CTFS_OFFENCER) {
-							ent->client->zc.ctfstate = CTFS_SUPPORTER;
-							ent->client->zc.followmate = trent;
-							ent->client->zc.matelock = level.time + 5.0f;
-						}
+						/* Support roles are assigned centrally so the whole team does
+						 * not abandon offense when the carrier passes nearby. */
 						// if carrier have enemy
 						if (Bot_ValidEnemy(ent, trent->client->zc.first_target) &&
 						    Bot_traceS(ent, trent->client->zc.first_target)) {
@@ -565,16 +583,26 @@ int Bot_SearchEnemy (edict_t *ent)
 	}
 	/* Do not flick between ordinary targets. Objective carriers and direct
 	 * attackers may always break the short skill-scaled target lock. */
-	if (target && old_target && target != old_target &&
-	    Bot_ValidEnemy(ent, old_target) && Bot_trace(ent, old_target) &&
-	    level.time < zc->target_switch_time &&
-	    selected_reason != BOT_REASON_OBJECTIVE_CARRIER &&
-	    selected_reason != BOT_REASON_DIRECT_ATTACKER) {
-		target = old_target;
-		best_priority = Bot_TargetPriority(ent, target, own_flag_index, &selected_reason);
+	if (target && old_target && target != old_target && Bot_ValidEnemy(ent, old_target) &&
+	    Bot_trace(ent, old_target)) {
+		float old_score = Bot_TargetPriority(ent, old_target, own_flag_index, NULL);
+		bool urgent = selected_reason == BOT_REASON_OBJECTIVE_CARRIER ||
+		              selected_reason == BOT_REASON_DIRECT_ATTACKER;
+		if (!BotPolicy_ShouldSwitchTarget(old_score, best_priority,
+		                                 level.time < zc->target_switch_time, urgent)) {
+			target = old_target;
+			best_priority = Bot_TargetPriority(ent, target, own_flag_index, &selected_reason);
+		}
 	}
 
 	if (target) {
+		if (Bot_trace(ent, target)) {
+			VectorCopy(target->s.origin, zc->target_last_seen_pos);
+			zc->target_seen_time = level.time;
+			zc->target_visible = true;
+		} else {
+			zc->target_visible = false;
+		}
 		if (target != old_target) {
 			int reaction = Bot[zc->botindex].param[BOP_REACTION];
 			zc->target_switch_time = level.time + 0.55f - reaction * 0.035f;
@@ -588,6 +616,7 @@ int Bot_SearchEnemy (edict_t *ent)
 	                         level.time - zc->target_seen_time > 0.35f +
 	                         Bot[zc->botindex].param[BOP_REACTION] * 0.08f)) {
 		zc->first_target = NULL;
+		zc->target_visible = false;
 		zc->ai_goal = BOT_GOAL_NONE;
 		zc->ai_reason = BOT_REASON_NONE;
 		zc->ai_goal_score = 0;
@@ -1195,6 +1224,8 @@ int Bot_moveT (edict_t *ent, float ryaw, vec3_t pos, float dist, float *bottom)
 	int tcontents;
 
 
+	if (bottom)
+		*bottom = 0;
 	tcontents = /* MASK_BOTSOLID*/ MASK_BOTSOLIDX; //MASK_PLAYERSOLID /*| CONTENTS_TRANSLUCENT*/;  //レーザーには触らない
 						       //	if(!ent->waterlevel) tcontents |= CONTENTS_WATER;
 
@@ -1685,14 +1716,22 @@ void Set_Combatstate (edict_t *ent, int foundedenemy)
 			return;
 		}
 		client->zc.zccmbstt |= CTS_ENEM_NSEE; //can't see
-						      //		return;
+		client->zc.target_visible = false;
+		client->zc.battlemode |= FIRE_ESTIMATE;
+		VectorCopy(client->zc.target_last_seen_pos, client->zc.vtemp);
 	} else {
 		ent->client->zc.targetlock = level.time + FRAMETIME * 12;
+		VectorCopy(target->s.origin, client->zc.target_last_seen_pos);
+		client->zc.target_seen_time = level.time;
+		client->zc.target_visible = true;
 		ent->client->zc.zccmbstt &= ~CTS_ENEM_NSEE; //can see
 		ent->client->zc.battlemode &= ~FIRE_ESTIMATE;
 	}
 
-	VectorSubtract(target->s.origin, ent->s.origin, v);
+	if (client->zc.target_visible)
+		VectorSubtract(target->s.origin, ent->s.origin, v);
+	else
+		VectorSubtract(client->zc.target_last_seen_pos, ent->s.origin, v);
 	distance = VectorLength(v);
 
 	//enemy's weapon
@@ -1859,7 +1898,8 @@ bool Bot_Jump (edict_t *ent, vec3_t pos, float dist)
 
 	yaw = zc->moveyaw;
 
-	Bot_moveT(ent, yaw, temppos, dist, &bottom);
+	if (!Bot_moveT(ent, yaw, temppos, dist, &bottom))
+		return false;
 	if (bottom > -JumpMax)
 		return false;
 
@@ -2334,6 +2374,11 @@ void Get_RouteOrigin (int index, vec3_t pos)
 {
 	edict_t *e;
 
+	VectorClear(pos);
+	if (index < 0 || index >= CurrentIndex)
+		return;
+	VectorCopy(Route[index].Pt, pos);
+
 	//when normal or items
 	if (Route[index].state <= GRS_ITEMS || Route[index].state >= GRS_GRAPSHOT) {
 		if (Route[index].state == GRS_ITEMS) {
@@ -2523,9 +2568,9 @@ static void Bot_DebugAI (edict_t *ent)
 	if (!weapon)
 		weapon = "-";
 
-	gi.dprintf("bot_ai slot=%d name=%s goal=%s reason=%s score=%.0f target=%s weapon=%s role=%d route=%s:%d recovery=%d\n",
+	gi.dprintf("bot_ai slot=%d name=%s goal=%s reason=%s score=%.0f target=%s visible=%d weapon=%s role=%d route=%s:%d recovery=%d\n",
 	           slot, ent->client->pers.netname, Bot_GoalName(zc->ai_goal),
-	           Bot_ReasonName(zc->ai_reason), zc->ai_goal_score, target, weapon,
+	           Bot_ReasonName(zc->ai_reason), zc->ai_goal_score, target, zc->target_visible, weapon,
 	           Bot_IsObjectiveCTF() ? zc->ctfstate : zc->tmplstate,
 	           zc->route_trace ? "on" : "off", zc->routeindex,
 	           zc->route_recovery_attempts);
@@ -2555,7 +2600,7 @@ static void Bot_RecoverRoute (edict_t *ent)
 	trace_t tr, floor;
 	float moved;
 	int i, best = -1;
-	float best_distance = 999999.0f;
+	float best_score = BOT_POLICY_REJECTED;
 
 	if (!zc->route_trace || zc->routeindex < 0 || zc->routeindex >= CurrentIndex ||
 	    Bot_RouteWaitExempt(ent)) {
@@ -2626,16 +2671,32 @@ static void Bot_RecoverRoute (edict_t *ent)
 	 * normal route search can start from a clean state. */
 	for (i = zc->routeindex - 24; i <= zc->routeindex + 24; i++) {
 		vec3_t point;
-		float distance;
+		float distance, score;
+		bot_policy_route_t candidate = {0};
+		int link;
 		if (i < 0 || i >= CurrentIndex || i == zc->routeindex || Route[i].state > GRS_ITEMS)
 			continue;
 		Get_RouteOrigin(i, point);
 		VectorSubtract(point, ent->s.origin, delta);
 		distance = VectorLength(delta);
-		if (distance >= best_distance || fabs(delta[2]) > JumpMax || !TraceX(ent, point))
+		if (fabs(delta[2]) > JumpMax || !TraceX(ent, point))
+			continue;
+		candidate.distance = distance;
+		candidate.forward = i > zc->routeindex;
+		candidate.backtrack = i < zc->routeindex;
+		for (link = 0; link < MAXLINKPOD - (ctf->value != 0); link++)
+			if (Route[zc->routeindex].linkpod[link] == i)
+				candidate.linked = true;
+		if (ctf->value && Route[i].state < GRS_ITEMS &&
+		    Route[zc->routeindex].state < GRS_ITEMS)
+			candidate.objective_match =
+				(Route[i].linkpod[MAXLINKPOD - 1] & CTF_FLAG2_FLAG) ==
+				(Route[zc->routeindex].linkpod[MAXLINKPOD - 1] & CTF_FLAG2_FLAG);
+		score = BotPolicy_RouteScore(&candidate);
+		if (score <= best_score)
 			continue;
 		best = i;
-		best_distance = distance;
+		best_score = score;
 	}
 
 	zc->second_target = NULL;
@@ -4313,6 +4374,10 @@ DCHCANC: //しゃがみっぱなし
 	//
 	//--------------------------------------------------------------------------------------
 
+	if ((zc->zcstate & STS_WAITSMASK) && (!zc->waitin_obj || !zc->waitin_obj->inuse)) {
+		zc->zcstate &= ~STS_WAITSMASK;
+		zc->waitin_obj = NULL;
+	}
 	if (!(zc->zcstate & STS_W_DOOROPEN) && (!ent->groundentity || ent->groundentity != zc->waitin_obj)) {
 		k = false;
 		if (zc->waitin_obj)
@@ -4528,6 +4593,7 @@ gi.bprintf(PRINT_HIGH,"aw shit!!\n");*/
 			//			if(zc->waitin_obj->velocity[2] == 0) k = false;
 			if (zc->routeindex - 1 > 0 && zc->waterstate < WAS_IN) {
 				Get_RouteOrigin(zc->routeindex - 1, trmin);
+				Get_RouteOrigin(zc->routeindex, v);
 				if ((trmin[2] - ent->s.origin[2]) > JumpMax && (v[2] - ent->s.origin[2]) > JumpMax)
 					//				Get_RouteOrigin(zc->routeindex - 1,v);
 					//				if((v[2] - ent->s.origin[2]) > JumpMax)
@@ -4607,7 +4673,8 @@ gi.bprintf(PRINT_HIGH,"aw shit!!\n");*/
 					zc->rt_locktime = level.time + FRAMETIME * POD_LOCKFRAME;
 			} else
 				zc->rt_locktime = level.time + FRAMETIME * POD_LOCKFRAME;
-		} else if (j || (zc->waitin_obj->s.origin[2] - zc->waitin_obj->s.old_origin[2]) <= 0)
+		} else if (j || !zc->waitin_obj ||
+		           (zc->waitin_obj->s.origin[2] - zc->waitin_obj->s.old_origin[2]) <= 0)
 			i = true;
 
 		if (i) {
@@ -4651,7 +4718,7 @@ gi.bprintf(PRINT_HIGH,"aw shit!!\n");*/
 	}
 	//wait for door open
 	else if (zc->zcstate & STS_W_DOOROPEN) {
-		if (!trace_priority || zc->waitin_obj->moveinfo.state == PSTATE_TOP
+		if (!zc->waitin_obj || !trace_priority || zc->waitin_obj->moveinfo.state == PSTATE_TOP
 		  /*|| (zc->waitin_obj->moveinfo.state == PSTATE_DOWN)*/) {
 			//gi.bprintf(PRINT_HIGH,"release %i %i\n",trace_priority,zc->waitin_obj->moveinfo.state);
 			zc->zcstate &= ~STS_WAITS;
@@ -5756,6 +5823,7 @@ GOMOVE:
 			} else {
 				trmax[0] = (it_ent->absmin[0] + it_ent->absmax[0]) / 2;
 				trmax[1] = (it_ent->absmin[1] + it_ent->absmax[1]) / 2;
+				trmax[2] = ent->s.origin[2];
 				VectorSubtract(trmax, ent->s.origin, temppos);
 				if (trace_priority < TRP_ANGLEKEEP)
 					ent->s.angles[YAW] = Get_yaw(temppos);
@@ -6013,6 +6081,7 @@ ent->velocity[1] = 800 * (random() - 0.5);
 ent->client->ps.pmove.pm_flags |= PMF_DUCKED;
 */
 	ent->client->zc.trapped = false; //trapcatch clear
+	Bot_ValidateAttack(ent);
 	Bot_DebugAI(ent);
 
 	if (ent->client->zc.oldyaw == 0)

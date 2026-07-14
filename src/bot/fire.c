@@ -1,6 +1,7 @@
 #include "../header/bot.h"
 #include "../header/shared.h"
 #include "../header/player.h"
+#include "policy.h"
 
 static bool Bot_TeamCombat (void)
 {
@@ -8,18 +9,52 @@ static bool Bot_TeamCombat (void)
 	       ((int)dmflags->value & (DF_MODELTEAMS | DF_SKINTEAMS));
 }
 
+static bot_policy_weapon_kind_t Bot_PolicyWeaponKind (int weapon)
+{
+	switch (weapon) {
+	case WEAP_BLASTER: return BOT_WEAPON_BLASTER;
+	case WEAP_SHOTGUN: return BOT_WEAPON_SHOTGUN;
+	case WEAP_SUPERSHOTGUN: return BOT_WEAPON_SUPERSHOTGUN;
+	case WEAP_MACHINEGUN: return BOT_WEAPON_MACHINEGUN;
+	case WEAP_CHAINGUN: return BOT_WEAPON_CHAINGUN;
+	case WEAP_GRENADES: return BOT_WEAPON_GRENADES;
+	case WEAP_GRENADELAUNCHER: return BOT_WEAPON_GRENADELAUNCHER;
+	case WEAP_ROCKETLAUNCHER: return BOT_WEAPON_ROCKETLAUNCHER;
+	case WEAP_HYPERBLASTER: return BOT_WEAPON_HYPERBLASTER;
+	case WEAP_RAILGUN: return BOT_WEAPON_RAILGUN;
+	case WEAP_BFG: return BOT_WEAPON_BFG;
+	default: return BOT_WEAPON_OTHER;
+	}
+}
+
+static float Bot_PreferredWeaponScore (edict_t *ent, int weapon, float distance,
+	int nearby_enemies, int target_health, int rank)
+{
+	bot_policy_weapon_t policy = {0};
+
+	policy.kind = Bot_PolicyWeaponKind(weapon);
+	policy.distance = distance;
+	policy.available_shots = 1; /* CanUsewep performs the authoritative inventory check. */
+	policy.preference = 2 - rank;
+	policy.nearby_enemies = nearby_enemies;
+	policy.target_health = target_health;
+	policy.current_weapon = Get_KindWeapon(ent->client->pers.weapon) == weapon;
+	return BotPolicy_WeaponScore(&policy);
+}
+
 /* Check the actual firing corridor, not only player-to-player visibility. */
-static bool Bot_ClearShot (edict_t *ent, edict_t *target, bool explosive)
+static bool Bot_ClearShot (edict_t *ent, edict_t *target, float splash_radius)
 {
 	vec3_t start, end, forward, delta;
 	trace_t tr;
 	int i;
+	float self_radius = splash_radius > 165.0f ? 120.0f : splash_radius;
 
 	AngleVectors(ent->s.angles, forward, NULL, NULL);
 	VectorCopy(ent->s.origin, start);
 	start[2] += ent->viewheight - 8;
 	VectorMA(start, 8, forward, start);
-	if (explosive) {
+	if (splash_radius > 0) {
 		VectorCopy(target->s.origin, end);
 		end[2] += target->viewheight * 0.5f;
 	} else {
@@ -29,7 +64,7 @@ static bool Bot_ClearShot (edict_t *ent, edict_t *target, bool explosive)
 	tr = gi.trace(start, NULL, NULL, end, ent, MASK_SHOT);
 	if (tr.ent && tr.ent->client && Bot_TeamCombat() && OnSameTeam(ent, tr.ent))
 		return false;
-	if (!explosive)
+	if (splash_radius <= 0)
 		return true;
 
 	/* Refuse splash shots that detonate beside the bot or a teammate. */
@@ -38,7 +73,7 @@ static bool Bot_ClearShot (edict_t *ent, edict_t *target, bool explosive)
 	if (tr.ent && tr.ent != target && tr.ent->client)
 		return false;
 	VectorSubtract(tr.endpos, ent->s.origin, delta);
-	if (VectorLength(delta) < 120.0f)
+	if (VectorLength(delta) < self_radius + 24.0f)
 		return false;
 	if (Bot_TeamCombat()) {
 		for (i = 1; i <= (int)maxclients->value; i++) {
@@ -47,11 +82,38 @@ static bool Bot_ClearShot (edict_t *ent, edict_t *target, bool explosive)
 			    !OnSameTeam(ent, mate))
 				continue;
 			VectorSubtract(tr.endpos, mate->s.origin, delta);
-			if (VectorLength(delta) < 140.0f)
+			if (VectorLength(delta) < splash_radius + 24.0f)
 				return false;
 		}
 	}
 	return true;
+}
+
+/* Apply safety after all legacy battle states have made their decision. */
+void Bot_ValidateAttack (edict_t *ent)
+{
+	edict_t *target;
+	int weapon;
+	float splash_radius = 0;
+
+	if (!ent || !ent->client || !(ent->client->buttons & BUTTON_ATTACK))
+		return;
+	weapon = Get_KindWeapon(ent->client->pers.weapon);
+	if (weapon == WEAP_GRAPPLE)
+		return;
+	target = ent->client->zc.first_target;
+	if (!target || !target->inuse || !target->client)
+		return;
+	switch (weapon) {
+	case WEAP_ROCKETLAUNCHER: splash_radius = 120.0f; break;
+	case WEAP_GRENADELAUNCHER: splash_radius = 160.0f; break;
+	case WEAP_GRENADES: splash_radius = 165.0f; break;
+	case WEAP_BFG: splash_radius = 1000.0f; break;
+	case WEAP_PHALANX: splash_radius = 120.0f; break;
+	default: break;
+	}
+	if (!Bot_ClearShot(ent, target, splash_radius))
+		ent->client->buttons &= ~BUTTON_ATTACK;
 }
 
 //======================================================================
@@ -67,6 +129,13 @@ void Get_AimAngle (edict_t *ent, float aim, float dist, int weapon)
 	trace_t rs_trace;
 
 	target = ent->client->zc.first_target;
+	if ((ent->client->zc.battlemode & FIRE_ESTIMATE) &&
+	    ent->client->zc.target_seen_time > 0) {
+		VectorSubtract(ent->client->zc.vtemp, ent->s.origin, targaim);
+		ent->s.angles[YAW] = Get_yaw(targaim);
+		ent->s.angles[PITCH] = Get_pitch(targaim);
+		return;
+	}
 
 	/* Instagib is hitscan: track the body with skill-scaled, persistent error.
 	 * Do not lead velocity as if the rail projectile had travel time. */
@@ -652,7 +721,7 @@ bool B_UsePhalanx (edict_t *ent, edict_t *target, int enewep, float aim, float d
 				return true;
 			}
 		}
-		if (Bot_traceS(ent, target) && Bot_ClearShot(ent, target, true))
+		if (Bot_traceS(ent, target) && Bot_ClearShot(ent, target, 120.0f))
 			client->buttons |= BUTTON_ATTACK;
 		return true;
 	}
@@ -717,7 +786,7 @@ bool B_UseRocket (edict_t *ent, edict_t *target, int enewep, float aim, float di
 				return true;
 			}
 		}
-		if (Bot_traceS(ent, target) && Bot_ClearShot(ent, target, true))
+		if (Bot_traceS(ent, target) && Bot_ClearShot(ent, target, 120.0f))
 			client->buttons |= BUTTON_ATTACK;
 		return true;
 	}
@@ -773,7 +842,7 @@ bool B_UseRailgun (edict_t *ent, edict_t *target, int enewep, float aim, float d
 			combat_skill = 9;
 		mywep = Get_KindWeapon(client->pers.weapon);
 		Get_AimAngle(ent, aim, distance, mywep);
-		if (Bot_ClearShot(ent, target, false)) {
+		if (Bot_ClearShot(ent, target, 0)) {
 			if (!(instagib && instagib->value) || level.time >= client->zc.next_fire_time) {
 				client->buttons |= BUTTON_ATTACK;
 				if (instagib && instagib->value) {
@@ -827,7 +896,7 @@ bool B_UseGrenadeLauncher (edict_t *ent, edict_t *target, int enewep, float aim,
 				return true;
 			}
 		}
-		if (distance >= 140 && Bot_ClearShot(ent, target, true))
+		if (distance >= 140 && Bot_ClearShot(ent, target, 160.0f))
 			client->buttons |= BUTTON_ATTACK;
 		if (trace_priority < TRP_ANGLEKEEP)
 			trace_priority = TRP_ANGLEKEEP;
@@ -1074,6 +1143,7 @@ void Combat_Level0 (edict_t *ent, int foundedenemy, int enewep, float aim, float
 
 	edict_t *target;
 	int mywep, i, j, k;
+	int utility_order[2] = {0, 1};
 	vec3_t v, vv, v1, v2;
 
 	trace_t rs_trace;
@@ -1583,6 +1653,13 @@ void Combat_Level0 (edict_t *ent, int foundedenemy, int enewep, float aim, float
 		if (B_UseBfg(ent, target, enewep, aim, distance, skill))
 			goto FIRED;
 	}
+	if (Bot_PreferredWeaponScore(ent, Bot[zc->botindex].param[BOP_PRIWEP + 1], distance,
+	                             zc->nearby_enemies, target->health, 1) >
+	    Bot_PreferredWeaponScore(ent, Bot[zc->botindex].param[BOP_PRIWEP], distance,
+	                             zc->nearby_enemies, target->health, 0)) {
+		utility_order[0] = 1;
+		utility_order[1] = 0;
+	}
 
 	for (i = 0; i < 3; i++) {
 		mywep = Get_KindWeapon(client->pers.weapon);
@@ -1607,7 +1684,7 @@ void Combat_Level0 (edict_t *ent, int foundedenemy, int enewep, float aim, float
 			} else
 				break;
 		} else
-			j = i;
+			j = utility_order[i];
 
 		if (distance > 300 && (zc->nearby_enemies >= 2 || target->health > 120) &&
 		    (mywep == WEAP_BFG || random() < 0.5)) {

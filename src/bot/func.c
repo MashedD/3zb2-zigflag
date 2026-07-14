@@ -435,30 +435,49 @@ void PutBotInServer (edict_t *ent)
 
 	if (instagib && instagib->value) {
 		item = FindItem("Railgun");
-		if (!item)
+		if (!item) {
 			gi.error("No Railgun item found");
-		client->pers.inventory[ITEM_INDEX(FindItem("Slugs"))] = 50;
+			return;
+		}
+		gitem_t *ammo = FindItem("Slugs");
+		if (!ammo) {
+			gi.error("No Slugs item found");
+			return;
+		}
+		client->pers.inventory[ITEM_INDEX(ammo)] = 50;
 	} else if (chaingib && chaingib->value) {
 		item = FindItem("Chaingun");
-		if (!item)
+		if (!item) {
 			gi.error("No Chaingun item found");
+			return;
+		}
 		int ammo_cap = chaingib_ammo_cap->value > 0 ? (int)chaingib_ammo_cap->value : 0;
 		int spawn_ammo = chaingib_ammo_spawn->value > 0 ? (int)chaingib_ammo_spawn->value : 0;
 		if (spawn_ammo > ammo_cap)
 			spawn_ammo = ammo_cap;
-		client->pers.inventory[ITEM_INDEX(FindItem("Bullets"))] = spawn_ammo;
-		client->pers.inventory[ITEM_INDEX(FindItem("Body Armor"))] = 100;
+		gitem_t *bullets = FindItem("Bullets");
+		gitem_t *armor = FindItem("Body Armor");
+		if (!bullets || !armor) {
+			gi.error("Required chaingib items not found");
+			return;
+		}
+		client->pers.inventory[ITEM_INDEX(bullets)] = spawn_ammo;
+		client->pers.inventory[ITEM_INDEX(armor)] = 100;
 	} else {
 		item = FindItem("Blaster");
-		if (!item)
+		if (!item) {
 			gi.error("No Blaster item found");
+			return;
+		}
 	}
 
 	client->pers.selected_item = ITEM_INDEX(item);
 	client->pers.inventory[client->pers.selected_item] = 1;
 	client->pers.weapon = item;
-	if (item->ammo)
-		client->ammo_index = ITEM_INDEX(FindItem(item->ammo));
+	if (item->ammo) {
+		gitem_t *ammo = FindItem(item->ammo);
+		client->ammo_index = ammo ? ITEM_INDEX(ammo) : 0;
+	}
 	else
 		client->ammo_index = 0;
 
