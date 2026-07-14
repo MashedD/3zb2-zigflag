@@ -40,6 +40,7 @@ Route chain files (`.chn`/`.chf`) contain object and level navigation data. See 
 | `combathud` | Extra HUD information | `1` (on) |
 | `respawn_protection` | Brief immunity on respawn | `0` (off) |
 | `spawnbotfar` | Spawn bots at farthest points | `0` (off) |
+| `bot_debug_ai` | Print one selected bot's AI state once per second (`0` off, positive client slot) | `0` |
 | `killerflag` | Flag drains holder health | `1` (on) |
 | `fixflaws` | Fix known Quake 2 gameplay flaws | `1` (on) |
 | `playerid` | Identify player in crosshair | `0` (off) |

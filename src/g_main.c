@@ -86,6 +86,7 @@ cvar_t *spawnbotfar;
 cvar_t *respawn_protection;
 cvar_t *g_sticky_grenades;
 cvar_t *g_crouching;
+cvar_t *bot_debug_ai;
 float spawncycle;
 float ctfjob_update;
 //ponpoko

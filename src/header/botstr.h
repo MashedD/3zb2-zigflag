@@ -4,6 +4,29 @@
 //Zigock client info
 #define ALEAT_MAX 10
 
+typedef enum
+{
+	BOT_GOAL_NONE,
+	BOT_GOAL_ENEMY,
+	BOT_GOAL_ITEM,
+	BOT_GOAL_OBJECTIVE,
+	BOT_GOAL_FOLLOW,
+	BOT_GOAL_ROUTE_RECOVERY
+} bot_goal_t;
+
+typedef enum
+{
+	BOT_REASON_NONE,
+	BOT_REASON_NEAREST_THREAT,
+	BOT_REASON_DIRECT_ATTACKER,
+	BOT_REASON_OBJECTIVE_CARRIER,
+	BOT_REASON_TEAM_ASSIST,
+	BOT_REASON_WEAK_ENEMY,
+	BOT_REASON_ITEM_NEED,
+	BOT_REASON_ITEM_UPGRADE,
+	BOT_REASON_ROUTE_STUCK
+} bot_reason_t;
+
 typedef struct zgcl_s
 {
 	int zclass; //class no.
@@ -87,6 +110,12 @@ typedef struct zgcl_s
 	float next_fire_time; //skill-scaled cadence for precision weapons
 	float combat_move_time; //next tactical movement decision
 	short combat_move_dir; //-1 left, 0 pause, 1 right
+	short ai_goal;        //bot_goal_t, for stable decisions and diagnostics
+	short ai_reason;      //bot_reason_t explaining the selected goal
+	float ai_goal_score;
+	float target_seen_time;
+	float target_switch_time;
+	float target_acquire_time;
 	vec3_t vtemp;	      //temporary vec
 	int foundedenemy;     //foundedenemy
 	char secwep_selected; //secondweapon selected
@@ -105,6 +134,15 @@ typedef struct zgcl_s
 	float ctf_role_time; //earliest time a non-carrier role may be reassigned
 	edict_t *followmate; //follow
 	float matelock;	     //team mate locking time
+	float donation_time; //next time a team donation may be made
+
+	// route progress and local recovery
+	vec3_t route_progress_origin;
+	int route_progress_index;
+	float route_progress_time;
+	float route_recovery_time;
+	short route_recovery_attempts;
+	float ai_debug_time;
 } zgcl_t;
 
 #endif

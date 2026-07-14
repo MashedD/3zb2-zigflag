@@ -11,8 +11,9 @@ static bool Bot_TeamCombat (void)
 /* Check the actual firing corridor, not only player-to-player visibility. */
 static bool Bot_ClearShot (edict_t *ent, edict_t *target, bool explosive)
 {
-	vec3_t start, end, forward;
+	vec3_t start, end, forward, delta;
 	trace_t tr;
+	int i;
 
 	AngleVectors(ent->s.angles, forward, NULL, NULL);
 	VectorCopy(ent->s.origin, start);
@@ -36,6 +37,20 @@ static bool Bot_ClearShot (edict_t *ent, edict_t *target, bool explosive)
 		return false;
 	if (tr.ent && tr.ent != target && tr.ent->client)
 		return false;
+	VectorSubtract(tr.endpos, ent->s.origin, delta);
+	if (VectorLength(delta) < 120.0f)
+		return false;
+	if (Bot_TeamCombat()) {
+		for (i = 1; i <= (int)maxclients->value; i++) {
+			edict_t *mate = &g_edicts[i];
+			if (!mate->inuse || !mate->client || mate == ent || mate->deadflag ||
+			    !OnSameTeam(ent, mate))
+				continue;
+			VectorSubtract(tr.endpos, mate->s.origin, delta);
+			if (VectorLength(delta) < 140.0f)
+				return false;
+		}
+	}
 	return true;
 }
 
@@ -1562,8 +1577,9 @@ void Combat_Level0 (edict_t *ent, int foundedenemy, int enewep, float aim, float
 			goto FIRED;
 	}
 
-	//BFG
-	if (distance > 200) {
+	/* Reserve the BFG for durable targets or groups instead of allowing its
+	 * position in the legacy weapon list to dominate every mid-range fight. */
+	if (distance > 300 && (zc->nearby_enemies >= 2 || target->health > 120)) {
 		if (B_UseBfg(ent, target, enewep, aim, distance, skill))
 			goto FIRED;
 	}
@@ -1593,7 +1609,8 @@ void Combat_Level0 (edict_t *ent, int foundedenemy, int enewep, float aim, float
 		} else
 			j = i;
 
-		if (distance > 100 && (mywep == WEAP_BFG || random() < 0.5)) {
+		if (distance > 300 && (zc->nearby_enemies >= 2 || target->health > 120) &&
+		    (mywep == WEAP_BFG || random() < 0.5)) {
 			if (B_UseBfg(ent, target, enewep, aim, distance, skill))
 				goto FIRED;
 		}
@@ -1678,8 +1695,21 @@ void Combat_Level0 (edict_t *ent, int foundedenemy, int enewep, float aim, float
 	//通常ファイアリング
 	//-----------------------------------------------------------------------
 	zc->secwep_selected = 0;
+
+	/* Range-aware fallback order. Per-bot primary/secondary preferences above
+	 * still win when suitable, while this path avoids selecting by weapon enum. */
+	if (distance >= 600) {
+		if (B_UseRailgun(ent, target, enewep, aim, distance, skill))
+			goto FIRED;
+	}
+	if (distance < 180) {
+		if (B_UseSuperShotgun(ent, target, enewep, aim, distance, skill))
+			goto FIRED;
+		if (B_UseChainGun(ent, target, enewep, aim, distance, skill))
+			goto FIRED;
+	}
 	//BFG
-	if (distance > 200) {
+	if (distance > 300 && (zc->nearby_enemies >= 2 || target->health > 120)) {
 		if (B_UseBfg(ent, target, enewep, aim, distance, skill))
 			goto FIRED;
 	}

@@ -230,6 +230,7 @@ void InitGame (void)
 	respawn_protection = gi.cvar("respawn_protection", "0", CVAR_ARCHIVE);
 	g_sticky_grenades = gi.cvar("g_sticky_grenades", "0", CVAR_ARCHIVE);
 	g_crouching = gi.cvar("g_crouching", "0", CVAR_ARCHIVE);
+	bot_debug_ai = gi.cvar("bot_debug_ai", "0", 0);
 
 	// items
 	InitItems();
