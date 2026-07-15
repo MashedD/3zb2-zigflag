@@ -162,3 +162,75 @@ bot_policy_ctf_quota_t BotPolicy_CTFQuota(int team_size, bot_policy_bool_t has_c
 	}
 	return quota;
 }
+
+float BotPolicy_MemoryConfidence(float age, int estimate_skill, bot_policy_bool_t visible)
+{
+	float lifetime;
+
+	if (visible)
+		return 1.0f;
+	if (estimate_skill < 0)
+		estimate_skill = 0;
+	if (estimate_skill > 9)
+		estimate_skill = 9;
+	lifetime = 0.35f + estimate_skill * 0.11f;
+	if (age <= 0)
+		return 1.0f;
+	if (age >= lifetime)
+		return 0.0f;
+	return 1.0f - age / lifetime;
+}
+
+float BotPolicy_MoveScore(const bot_policy_move_t *move)
+{
+	float score = 300.0f - move->range_error * 0.8f + move->objective_progress * 0.4f;
+
+	if (move->cover)
+		score += 180.0f;
+	if (move->exposed)
+		score -= 120.0f;
+	if (move->teammate_crowded)
+		score -= 160.0f;
+	if (move->hazard)
+		return BOT_POLICY_REJECTED;
+	if (move->kind == BOT_MOVE_HOLD)
+		score += 15.0f;
+	return score;
+}
+
+float BotPolicy_GoalScore(const bot_policy_goal_t *goal)
+{
+	float confidence = goal->confidence;
+
+	if (confidence < 0)
+		confidence = 0;
+	if (confidence > 1)
+		confidence = 1;
+	return goal->base_score * confidence - goal->travel_cost +
+	       (goal->urgent ? 900.0f : 0.0f) + (goal->committed ? 180.0f : 0.0f);
+}
+
+float BotPolicy_RoleScore(const bot_policy_role_t *role)
+{
+	if (role->defender)
+		return (9 - role->offence) * 90.0f + role->teamwork * 20.0f;
+	if (role->supporter)
+		return role->teamwork * 100.0f + role->offence * 15.0f -
+		       role->carrier_distance * 0.35f;
+	return role->offence * 80.0f + role->teamwork * 10.0f;
+}
+
+float BotPolicy_ProjectileLead(float distance, float projectile_speed, int aim_skill)
+{
+	float skill_factor, lead;
+
+	if (projectile_speed <= 0 || distance <= 0)
+		return 0;
+	if (aim_skill < 0)
+		aim_skill = 0;
+	if (aim_skill > 9)
+		aim_skill = 9;
+	skill_factor = 0.45f + aim_skill * 0.055f;
+	lead = distance / projectile_speed * skill_factor;
+	return lead > 1.2f ? 1.2f : lead;
+}

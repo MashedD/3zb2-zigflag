@@ -113,8 +113,13 @@ typedef struct zgcl_s
 	short ai_goal;        //bot_goal_t, for stable decisions and diagnostics
 	short ai_reason;      //bot_reason_t explaining the selected goal
 	float ai_goal_score;
+	float ai_goal_commit_time;
 	float target_seen_time;
 	vec3_t target_last_seen_pos;
+	vec3_t target_last_seen_velocity;
+	float target_confidence;
+	short target_last_seen_weapon;
+	short target_last_seen_health;
 	bool target_visible;
 	float target_switch_time;
 	float target_acquire_time;
@@ -129,6 +134,10 @@ typedef struct zgcl_s
 	float threat_level;	 //0.0-1.0: how dangerous current situation is
 	float last_threat_check; //level.time of last threat assessment
 	int nearby_enemies;	 //count of enemies in vicinity
+	short selected_weapon;
+	short weapon_action;
+	short combat_move_choice;
+	float selected_weapon_score;
 
 	//team
 	short tmplstate;     //teamplay state

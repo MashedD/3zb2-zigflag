@@ -112,8 +112,10 @@ void Bot_ValidateAttack (edict_t *ent)
 	case WEAP_PHALANX: splash_radius = 120.0f; break;
 	default: break;
 	}
-	if (!Bot_ClearShot(ent, target, splash_radius))
+	if (!Bot_ClearShot(ent, target, splash_radius)) {
 		ent->client->buttons &= ~BUTTON_ATTACK;
+		ent->client->zc.weapon_action = BOT_WEAPON_BLOCKED;
+	}
 }
 
 //======================================================================
@@ -162,6 +164,21 @@ void Get_AimAngle (edict_t *ent, float aim, float dist, int weapon)
 		ent->s.angles[PITCH] = Get_pitch(targaim);
 		ent->s.angles[YAW] += sinf(phase) * yaw_error;
 		ent->s.angles[PITCH] += cosf(phase * 0.79f) * pitch_error;
+		return;
+	}
+	if (weapon == WEAP_ROCKETLAUNCHER || weapon == WEAP_HYPERBLASTER ||
+	    weapon == WEAP_PHALANX || weapon == WEAP_BOOMER) {
+		float speed = weapon == WEAP_ROCKETLAUNCHER ? 650.0f :
+		              weapon == WEAP_HYPERBLASTER ? 1000.0f :
+		              weapon == WEAP_PHALANX ? 725.0f : 500.0f;
+		float lead = BotPolicy_ProjectileLead(dist, speed,
+			Bot[ent->client->zc.botindex].param[BOP_AIM]);
+		float error = aim * 0.35f;
+		VectorMA(target->s.origin, lead, target->velocity, targaim);
+		targaim[2] += target->viewheight * 0.35f;
+		VectorSubtract(targaim, ent->s.origin, targaim);
+		ent->s.angles[YAW] = Get_yaw(targaim) + (random() - 0.5f) * error;
+		ent->s.angles[PITCH] = Get_pitch(targaim) + (random() - 0.5f) * error;
 		return;
 	}
 
@@ -1072,6 +1089,249 @@ bool B_UseBlaster (edict_t *ent, edict_t *target, int enewep, float aim, float d
 	return false;
 }
 
+static gitem_t *Bot_WeaponItem (int weapon)
+{
+	switch (weapon) {
+	case WEAP_BLASTER: return Fdi_BLASTER;
+	case WEAP_SHOTGUN: return Fdi_SHOTGUN;
+	case WEAP_SUPERSHOTGUN: return Fdi_SUPERSHOTGUN;
+	case WEAP_MACHINEGUN: return Fdi_MACHINEGUN;
+	case WEAP_CHAINGUN: return Fdi_CHAINGUN;
+	case WEAP_GRENADES: return Fdi_GRENADES;
+	case WEAP_GRENADELAUNCHER: return Fdi_GRENADELAUNCHER;
+	case WEAP_ROCKETLAUNCHER: return Fdi_ROCKETLAUNCHER;
+	case WEAP_HYPERBLASTER: return Fdi_HYPERBLASTER;
+	case WEAP_RAILGUN: return Fdi_RAILGUN;
+	case WEAP_BFG: return Fdi_BFG;
+	case WEAP_PHALANX: return Fdi_PHALANX;
+	case WEAP_BOOMER: return Fdi_BOOMER;
+	case WEAP_TRAP: return Fdi_TRAP;
+	default: return NULL;
+	}
+}
+
+static int Bot_WeaponShots (edict_t *ent, int weapon)
+{
+	gitem_t *item = Bot_WeaponItem(weapon);
+	gitem_t *ammo;
+	int quantity;
+
+	if (!item)
+		return 0;
+	if (weapon == WEAP_BLASTER)
+		return 999;
+	if (item->flags & IT_AMMO)
+		return ent->client->pers.inventory[ITEM_INDEX(item)];
+	if (!ent->client->pers.inventory[ITEM_INDEX(item)])
+		return 0;
+	if (!item->ammo)
+		return 999;
+	ammo = FindItem(item->ammo);
+	if (!ammo)
+		return 0;
+	quantity = item->quantity > 0 ? item->quantity : 1;
+	return ent->client->pers.inventory[ITEM_INDEX(ammo)] / quantity;
+}
+
+static float Bot_WeaponSplash (int weapon)
+{
+	switch (weapon) {
+	case WEAP_ROCKETLAUNCHER: return 120.0f;
+	case WEAP_GRENADELAUNCHER: return 160.0f;
+	case WEAP_GRENADES: return 165.0f;
+	case WEAP_BFG: return 1000.0f;
+	case WEAP_PHALANX: return 120.0f;
+	default: return 0;
+	}
+}
+
+static bool Bot_DirectCorridorSafe (edict_t *ent, edict_t *target)
+{
+	vec3_t start, end;
+	trace_t tr;
+
+	VectorCopy(ent->s.origin, start);
+	start[2] += ent->viewheight - 8;
+	VectorCopy(target->s.origin, end);
+	end[2] += target->viewheight * 0.5f;
+	tr = gi.trace(start, NULL, NULL, end, ent, MASK_SHOT);
+	if (tr.ent && tr.ent->client && Bot_TeamCombat() && OnSameTeam(ent, tr.ent))
+		return false;
+	return tr.ent == target || tr.fraction == 1.0f;
+}
+
+static bot_weapon_action_t Bot_FireUtilityWeapon (edict_t *ent, edict_t *target,
+	int weapon, int enewep, float aim, float distance, int skill)
+{
+	bool handled = false;
+	float splash = Bot_WeaponSplash(weapon);
+
+	if (Bot_WeaponShots(ent, weapon) <= 0)
+		return BOT_WEAPON_UNAVAILABLE;
+	if (splash > 0 && !Bot_ClearShot(ent, target, splash))
+		return BOT_WEAPON_BLOCKED;
+	if (splash <= 0 && !Bot_DirectCorridorSafe(ent, target))
+		return BOT_WEAPON_BLOCKED;
+	switch (weapon) {
+	case WEAP_BFG: handled = B_UseBfg(ent, target, enewep, aim, distance, skill); break;
+	case WEAP_HYPERBLASTER: handled = B_UseHyperBlaster(ent, target, enewep, aim, distance, skill); break;
+	case WEAP_PHALANX: handled = B_UsePhalanx(ent, target, enewep, aim, distance, skill); break;
+	case WEAP_ROCKETLAUNCHER: handled = B_UseRocket(ent, target, enewep, aim, distance, skill); break;
+	case WEAP_BOOMER: handled = B_UseBoomer(ent, target, enewep, aim, distance, skill); break;
+	case WEAP_RAILGUN: handled = B_UseRailgun(ent, target, enewep, aim, distance, skill); break;
+	case WEAP_GRENADELAUNCHER: handled = B_UseGrenadeLauncher(ent, target, enewep, aim, distance, skill); break;
+	case WEAP_CHAINGUN: handled = B_UseChainGun(ent, target, enewep, aim, distance, skill); break;
+	case WEAP_MACHINEGUN: handled = B_UseMachineGun(ent, target, enewep, aim, distance, skill); break;
+	case WEAP_SUPERSHOTGUN: handled = B_UseSuperShotgun(ent, target, enewep, aim, distance, skill); break;
+	case WEAP_SHOTGUN: handled = B_UseShotgun(ent, target, enewep, aim, distance, skill); break;
+	case WEAP_GRENADES: handled = B_UseHandGrenade(ent, target, enewep, aim, distance, skill); break;
+	case WEAP_TRAP: handled = B_UseTrap(ent, target, enewep, aim, distance, skill); break;
+	case WEAP_BLASTER: handled = B_UseBlaster(ent, target, enewep, aim, distance, skill); break;
+	default: break;
+	}
+	if (!handled)
+		return BOT_WEAPON_UNAVAILABLE;
+	if (Get_KindWeapon(ent->client->pers.weapon) != weapon || ent->client->newweapon)
+		return BOT_WEAPON_SWITCHING;
+	return (ent->client->buttons & BUTTON_ATTACK) ? BOT_WEAPON_FIRED : BOT_WEAPON_BLOCKED;
+}
+
+static int Bot_RankWeapons (edict_t *ent, edict_t *target, float distance,
+	int *ordered, float *scores, int capacity)
+{
+	static const int weapons[] = {
+		WEAP_BFG, WEAP_RAILGUN, WEAP_ROCKETLAUNCHER, WEAP_HYPERBLASTER,
+		WEAP_CHAINGUN, WEAP_GRENADELAUNCHER, WEAP_SUPERSHOTGUN,
+		WEAP_MACHINEGUN, WEAP_SHOTGUN, WEAP_PHALANX, WEAP_BOOMER,
+		WEAP_GRENADES, WEAP_TRAP, WEAP_BLASTER
+	};
+	int count = 0, i, j;
+
+	for (i = 0; i < (int)(sizeof(weapons) / sizeof(weapons[0])) && count < capacity; i++) {
+		bot_policy_weapon_t policy = {0};
+		int weapon = weapons[i];
+		policy.kind = Bot_PolicyWeaponKind(weapon);
+		policy.distance = distance;
+		policy.available_shots = Bot_WeaponShots(ent, weapon);
+		policy.preference = weapon == Bot[ent->client->zc.botindex].param[BOP_PRIWEP] ? 3 :
+		                    weapon == Bot[ent->client->zc.botindex].param[BOP_SECWEP] ? 2 : 0;
+		policy.nearby_enemies = ent->client->zc.nearby_enemies;
+		policy.target_health = ent->client->zc.target_visible ? target->health :
+		                       ent->client->zc.target_last_seen_health;
+		policy.current_weapon = Get_KindWeapon(ent->client->pers.weapon) == weapon;
+		policy.splash_unsafe = Bot_WeaponSplash(weapon) > 0 &&
+		                       !Bot_ClearShot(ent, target, Bot_WeaponSplash(weapon));
+		policy.corridor_blocked = Bot_WeaponSplash(weapon) <= 0 &&
+		                            !Bot_DirectCorridorSafe(ent, target);
+		scores[count] = BotPolicy_WeaponScore(&policy);
+		ordered[count++] = weapon;
+	}
+	for (i = 1; i < count; i++) {
+		int weapon = ordered[i];
+		float score = scores[i];
+		for (j = i; j > 0 && scores[j - 1] < score; j--) {
+			ordered[j] = ordered[j - 1];
+			scores[j] = scores[j - 1];
+		}
+		ordered[j] = weapon;
+		scores[j] = score;
+	}
+	return count;
+}
+
+static void Bot_SelectCombatMove (edict_t *ent, edict_t *target, int skill)
+{
+	static const bot_policy_move_kind_t kinds[] = {
+		BOT_MOVE_HOLD, BOT_MOVE_FORWARD, BOT_MOVE_BACK, BOT_MOVE_LEFT, BOT_MOVE_RIGHT
+	};
+	static const float offsets[] = {0, 0, 180, -90, 90};
+	zgcl_t *zc = &ent->client->zc;
+	vec3_t to_target, route_point;
+	float base_yaw, ideal = 420.0f, best_score = BOT_POLICY_REJECTED;
+	int weapon = zc->selected_weapon ? zc->selected_weapon : Get_KindWeapon(ent->client->pers.weapon);
+	int best = BOT_MOVE_HOLD, i;
+
+	if (!ent->groundentity || ent->waterlevel >= 2 || level.time < zc->combat_move_time)
+		return;
+	if (weapon == WEAP_SHOTGUN || weapon == WEAP_SUPERSHOTGUN)
+		ideal = 190.0f;
+	else if (weapon == WEAP_RAILGUN)
+		ideal = 800.0f;
+	else if (weapon == WEAP_ROCKETLAUNCHER || weapon == WEAP_GRENADELAUNCHER)
+		ideal = 500.0f;
+	VectorSubtract(target->s.origin, ent->s.origin, to_target);
+	base_yaw = Get_yaw(to_target);
+	VectorClear(route_point);
+	if (zc->route_trace && zc->routeindex + 1 < CurrentIndex)
+		Get_RouteOrigin(zc->routeindex + 1, route_point);
+
+	for (i = 0; i < 5; i++) {
+		bot_policy_move_t move = {0};
+		vec3_t angles = {0, base_yaw + offsets[i], 0};
+		vec3_t forward, destination, down, delta;
+		trace_t travel, floor, sight;
+		float score, old_route_distance = 0, new_route_distance = 0;
+		int client_index;
+
+		move.kind = kinds[i];
+		if (kinds[i] == BOT_MOVE_HOLD)
+			VectorCopy(ent->s.origin, destination);
+		else {
+			AngleVectors(angles, forward, NULL, NULL);
+			VectorMA(ent->s.origin, 72.0f, forward, destination);
+		}
+		travel = gi.trace(ent->s.origin, ent->mins, ent->maxs, destination, ent, MASK_BOTSOLID);
+		VectorCopy(travel.endpos, destination);
+		VectorCopy(destination, down);
+		down[2] -= 72.0f;
+		floor = gi.trace(destination, ent->mins, ent->maxs, down, ent, MASK_BOTGROUND);
+		move.hazard = kinds[i] != BOT_MOVE_HOLD &&
+			(travel.fraction < 0.65f || floor.fraction == 1.0f ||
+			 (gi.pointcontents(floor.endpos) & (CONTENTS_LAVA | CONTENTS_SLIME)));
+		VectorSubtract(target->s.origin, destination, delta);
+		move.range_error = fabsf(VectorLength(delta) - ideal);
+		sight = gi.trace(destination, NULL, NULL, target->s.origin, ent, MASK_SHOT);
+		move.cover = sight.fraction < 1.0f && sight.ent != target;
+		move.exposed = !move.cover && target->client->weaponstate == WEAPON_FIRING;
+		for (client_index = 1; client_index <= (int)maxclients->value; client_index++) {
+			edict_t *mate = &g_edicts[client_index];
+			if (!mate->inuse || !mate->client || mate == ent || !Bot_TeamCombat() ||
+			    !OnSameTeam(ent, mate))
+				continue;
+			VectorSubtract(mate->s.origin, destination, delta);
+			if (VectorLength(delta) < 72.0f) {
+				move.teammate_crowded = true;
+				break;
+			}
+		}
+		if (zc->route_trace && zc->routeindex + 1 < CurrentIndex) {
+			VectorSubtract(route_point, ent->s.origin, delta);
+			old_route_distance = VectorLength(delta);
+			VectorSubtract(route_point, destination, delta);
+			new_route_distance = VectorLength(delta);
+			move.objective_progress = old_route_distance - new_route_distance;
+		}
+		score = BotPolicy_MoveScore(&move) + (random() - 0.5f) * (9 - skill) * 18.0f;
+		if (score > best_score) {
+			best_score = score;
+			best = kinds[i];
+		}
+	}
+
+	zc->combat_move_choice = best;
+	zc->combat_move_time = level.time + 0.18f + (9 - skill) * 0.045f + random() * 0.18f;
+	if (best == BOT_MOVE_HOLD) {
+		ent->moveinfo.speed = 0;
+		trace_priority = TRP_MOVEKEEP;
+		return;
+	}
+	zc->moveyaw = base_yaw + (best == BOT_MOVE_BACK ? 180.0f :
+	              best == BOT_MOVE_LEFT ? -90.0f : best == BOT_MOVE_RIGHT ? 90.0f : 0);
+	if (zc->moveyaw > 180) zc->moveyaw -= 360;
+	if (zc->moveyaw < -180) zc->moveyaw += 360;
+	trace_priority = TRP_MOVEKEEP;
+}
+
 //return weapon
 void Combat_LevelX (edict_t *ent, int foundedenemy, int enewep, float aim, float distance, int skill)
 {
@@ -1144,6 +1404,8 @@ void Combat_Level0 (edict_t *ent, int foundedenemy, int enewep, float aim, float
 	edict_t *target;
 	int mywep, i, j, k;
 	int utility_order[2] = {0, 1};
+	int ranked_weapons[16];
+	float ranked_scores[16];
 	vec3_t v, vv, v1, v2;
 
 	trace_t rs_trace;
@@ -1771,7 +2033,25 @@ void Combat_Level0 (edict_t *ent, int foundedenemy, int enewep, float aim, float
 	//-----------------------------------------------------------------------
 	//通常ファイアリング
 	//-----------------------------------------------------------------------
-	zc->secwep_selected = 0;
+	 zc->secwep_selected = 0;
+	{
+		int ranked_count = Bot_RankWeapons(ent, target, distance, ranked_weapons,
+		                                   ranked_scores, 16);
+		for (i = 0; i < ranked_count; i++) {
+			bot_weapon_action_t action;
+			if (ranked_scores[i] <= BOT_POLICY_REJECTED)
+				continue;
+			zc->selected_weapon = ranked_weapons[i];
+			zc->selected_weapon_score = ranked_scores[i];
+			action = Bot_FireUtilityWeapon(ent, target, ranked_weapons[i], enewep,
+			                               aim, distance, skill);
+			zc->weapon_action = action;
+			if (action == BOT_WEAPON_FIRED)
+				goto FIRED;
+			if (action == BOT_WEAPON_SWITCHING)
+				return;
+		}
+	}
 
 	/* Range-aware fallback order. Per-bot primary/secondary preferences above
 	 * still win when suitable, while this path avoids selecting by weapon enum. */
@@ -1877,6 +2157,7 @@ void Combat_Level0 (edict_t *ent, int foundedenemy, int enewep, float aim, float
 FIRED:
 	if (zc->secwep_selected == 2)
 		zc->secwep_selected = 1;
+	Bot_SelectCombatMove(ent, target, skill);
 
 	if (instagib && instagib->value && Bot[zc->botindex].param[BOP_DODGE] &&
 	    ent->groundentity && !ent->waterlevel && trace_priority < TRP_MOVEKEEP) {

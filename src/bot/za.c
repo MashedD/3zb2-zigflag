@@ -138,15 +138,27 @@ static float Bot_TargetPriority (edict_t *ent, edict_t *target, int own_flag_ind
 	float distance;
 	int my_weapon, enemy_weapon;
 	bot_policy_target_t policy = {0};
+	bool observed = Bot_trace(ent, target);
+	vec3_t known_position;
 
-	VectorSubtract(target->s.origin, ent->s.origin, delta);
+	if (observed)
+		VectorCopy(target->s.origin, known_position);
+	else if (target == ent->client->zc.first_target && ent->client->zc.target_confidence > 0)
+		VectorCopy(ent->client->zc.target_last_seen_pos, known_position);
+	else if (target->mynoise && target->mynoise->teleport_time >= level.time - FRAMETIME)
+		VectorCopy(target->mynoise->s.origin, known_position);
+	else
+		VectorCopy(ent->s.origin, known_position);
+	VectorSubtract(known_position, ent->s.origin, delta);
 	distance = VectorLength(delta);
 	policy.distance = distance;
-	policy.health = target->health;
+	policy.health = observed ? target->health :
+		(target == ent->client->zc.first_target ? ent->client->zc.target_last_seen_health : 100);
 	if (reason)
 		*reason = BOT_REASON_NEAREST_THREAT;
 	my_weapon = Get_KindWeapon(ent->client->pers.weapon);
-	enemy_weapon = Get_KindWeapon(target->client->pers.weapon);
+	enemy_weapon = observed ? Get_KindWeapon(target->client->pers.weapon) :
+		(target == ent->client->zc.first_target ? ent->client->zc.target_last_seen_weapon : WEAP_BLASTER);
 
 	/* Someone actively fighting us is more urgent than a passer-by. */
 	if (target->client->zc.first_target == ent) {
@@ -156,18 +168,18 @@ static float Bot_TargetPriority (edict_t *ent, edict_t *target, int own_flag_ind
 	}
 
 	/* In objective modes, intercept the carrier before taking ordinary fights. */
-	if (Bot_IsObjectiveCTF() && own_flag_index >= 0 && target->client->pers.inventory[own_flag_index]) {
+	if (observed && Bot_IsObjectiveCTF() && own_flag_index >= 0 && target->client->pers.inventory[own_flag_index]) {
 		policy.objective_carrier = true;
 		if (reason)
 			*reason = BOT_REASON_OBJECTIVE_CARRIER;
-	} else if (!ctf->value && zflag_item && target->client->pers.inventory[ITEM_INDEX(zflag_item)]) {
+	} else if (observed && !ctf->value && zflag_item && target->client->pers.inventory[ITEM_INDEX(zflag_item)]) {
 		policy.objective_carrier = true;
 		if (reason)
 			*reason = BOT_REASON_OBJECTIVE_CARRIER;
 	}
 
 	/* Help a nearby teammate who is already engaged. */
-	if (Bot_IsTeamMode() && target->client->zc.first_target &&
+	if (observed && Bot_IsTeamMode() && target->client->zc.first_target &&
 	    OnSameTeam(ent, target->client->zc.first_target)) {
 		policy.assists_teammate = true;
 		if (reason && *reason == BOT_REASON_NEAREST_THREAT)
@@ -175,14 +187,14 @@ static float Bot_TargetPriority (edict_t *ent, edict_t *target, int own_flag_ind
 	}
 
 	/* Finishing a weakened opponent is usually better than changing targets. */
-	if (target->health > 0 && target->health < 50) {
+	if (policy.health > 0 && policy.health < 50) {
 		if (reason && *reason == BOT_REASON_NEAREST_THREAT)
 			*reason = BOT_REASON_WEAK_ENEMY;
 	}
 
 	/* Prefer threats that can actually hurt us now, without granting bots
 	 * knowledge of players outside their normal sight/noise checks. */
-	if (target->client->weaponstate == WEAPON_FIRING)
+	if (observed && target->client->weaponstate == WEAPON_FIRING)
 		policy.firing = true;
 	if (enemy_weapon >= WEAP_ROCKETLAUNCHER && enemy_weapon > my_weapon)
 		policy.weapon_advantage = true;
@@ -598,11 +610,18 @@ int Bot_SearchEnemy (edict_t *ent)
 	if (target) {
 		if (Bot_trace(ent, target)) {
 			VectorCopy(target->s.origin, zc->target_last_seen_pos);
+			VectorCopy(target->velocity, zc->target_last_seen_velocity);
 			zc->target_seen_time = level.time;
 			zc->target_visible = true;
+			zc->target_last_seen_weapon = Get_KindWeapon(target->client->pers.weapon);
+			zc->target_last_seen_health = target->health;
 		} else {
 			zc->target_visible = false;
 		}
+		zc->target_confidence = BotPolicy_MemoryConfidence(
+			level.time - zc->target_seen_time,
+			Bot[zc->botindex].param[BOP_ESTIMATE] ?
+			Bot[zc->botindex].param[BOP_COMBATSKILL] : 0, zc->target_visible);
 		if (target != old_target) {
 			int reaction = Bot[zc->botindex].param[BOP_REACTION];
 			zc->target_switch_time = level.time + 0.55f - reaction * 0.035f;
@@ -612,14 +631,18 @@ int Bot_SearchEnemy (edict_t *ent)
 		zc->ai_goal = BOT_GOAL_ENEMY;
 		zc->ai_reason = selected_reason;
 		zc->ai_goal_score = best_priority;
+		if (target != old_target)
+			zc->ai_goal_commit_time = level.time + 0.45f;
 	} else if (old_target && (!Bot_ValidEnemy(ent, old_target) ||
-	                         level.time - zc->target_seen_time > 0.35f +
-	                         Bot[zc->botindex].param[BOP_REACTION] * 0.08f)) {
+	                         BotPolicy_MemoryConfidence(level.time - zc->target_seen_time,
+	                         Bot[zc->botindex].param[BOP_ESTIMATE] ?
+	                         Bot[zc->botindex].param[BOP_COMBATSKILL] : 0, false) <= 0)) {
 		zc->first_target = NULL;
 		zc->target_visible = false;
 		zc->ai_goal = BOT_GOAL_NONE;
 		zc->ai_reason = BOT_REASON_NONE;
 		zc->ai_goal_score = 0;
+		zc->target_confidence = 0;
 	}
 	//	ent->client->zc.zcstate &= ~CTS_COMBS;	//clear combat state
 
@@ -1083,11 +1106,23 @@ void Bot_SearchItems (edict_t *ent)
 			target = NULL;
 		}
 		if (best_item) {
-			zc->second_target = best_item;
-			zc->ai_goal = best_item_reason == BOT_REASON_OBJECTIVE_CARRIER ?
-			              BOT_GOAL_OBJECTIVE : BOT_GOAL_ITEM;
-			zc->ai_reason = best_item_reason;
-			zc->ai_goal_score = best_item_score;
+			bot_policy_goal_t candidate = {0};
+			float goal_score;
+			candidate.base_score = best_item_score;
+			candidate.confidence = 1.0f;
+			candidate.urgent = best_item_reason == BOT_REASON_OBJECTIVE_CARRIER;
+			candidate.committed = zc->second_target == best_item &&
+			                      zc->ai_goal_commit_time > level.time;
+			goal_score = BotPolicy_GoalScore(&candidate);
+			if (!zc->first_target || candidate.urgent ||
+			    goal_score > zc->ai_goal_score +
+			                 (zc->ai_goal_commit_time > level.time ? 260.0f : 100.0f)) {
+				zc->second_target = best_item;
+				zc->ai_goal = candidate.urgent ? BOT_GOAL_OBJECTIVE : BOT_GOAL_ITEM;
+				zc->ai_reason = best_item_reason;
+				zc->ai_goal_score = goal_score;
+				zc->ai_goal_commit_time = level.time + 0.8f;
+			}
 		}
 	}
 }
@@ -1717,13 +1752,27 @@ void Set_Combatstate (edict_t *ent, int foundedenemy)
 		}
 		client->zc.zccmbstt |= CTS_ENEM_NSEE; //can't see
 		client->zc.target_visible = false;
+		client->zc.target_confidence = BotPolicy_MemoryConfidence(
+			level.time - client->zc.target_seen_time,
+			Bot[client->zc.botindex].param[BOP_ESTIMATE] ?
+			Bot[client->zc.botindex].param[BOP_COMBATSKILL] : 0, false);
+		if (client->zc.target_confidence <= 0) {
+			client->zc.first_target = NULL;
+			return;
+		}
 		client->zc.battlemode |= FIRE_ESTIMATE;
-		VectorCopy(client->zc.target_last_seen_pos, client->zc.vtemp);
+		VectorMA(client->zc.target_last_seen_pos,
+		         (level.time - client->zc.target_seen_time) * client->zc.target_confidence,
+		         client->zc.target_last_seen_velocity, client->zc.vtemp);
 	} else {
 		ent->client->zc.targetlock = level.time + FRAMETIME * 12;
 		VectorCopy(target->s.origin, client->zc.target_last_seen_pos);
 		client->zc.target_seen_time = level.time;
 		client->zc.target_visible = true;
+		client->zc.target_confidence = 1.0f;
+		VectorCopy(target->velocity, client->zc.target_last_seen_velocity);
+		client->zc.target_last_seen_weapon = Get_KindWeapon(target->client->pers.weapon);
+		client->zc.target_last_seen_health = target->health;
 		ent->client->zc.zccmbstt &= ~CTS_ENEM_NSEE; //can see
 		ent->client->zc.battlemode &= ~FIRE_ESTIMATE;
 	}
@@ -1735,7 +1784,8 @@ void Set_Combatstate (edict_t *ent, int foundedenemy)
 	distance = VectorLength(v);
 
 	//enemy's weapon
-	enewep = Get_KindWeapon(target->client->pers.weapon);
+	enewep = client->zc.target_visible ? Get_KindWeapon(target->client->pers.weapon) :
+	         client->zc.target_last_seen_weapon;
 
 	int combskill = (int)Bot[client->zc.botindex].param[BOP_COMBATSKILL];
 	if (combskill < 0 || combskill > 9)
@@ -1783,7 +1833,10 @@ void Set_Combatstate (edict_t *ent, int foundedenemy)
 
 	if (client->zc.first_target) {
 		client->zc.last_target = client->zc.first_target;
-		VectorCopy(client->zc.first_target->s.origin, client->zc.last_pos);
+		if (client->zc.target_visible)
+			VectorCopy(client->zc.first_target->s.origin, client->zc.last_pos);
+		else
+			VectorCopy(client->zc.vtemp, client->zc.last_pos);
 	}
 	return;
 }
@@ -1795,9 +1848,14 @@ int Bot_AssessThreat (edict_t *ent, edict_t *target, int foundedenemy, float dis
 	int myWeapon = Get_KindWeapon(ent->client->pers.weapon);
 	int myPower = myHealth + (myArmor * 2) + (myWeapon * 15);
 
-	int enemyHealth = target->health;
-	int enemyArmor = target->client->pers.inventory[ITEM_INDEX(FindItem("Jacket Armor"))] + target->client->pers.inventory[ITEM_INDEX(FindItem("Combat Armor"))] + target->client->pers.inventory[ITEM_INDEX(FindItem("Body Armor"))];
-	int enemyWeapon = Get_KindWeapon(target->client->pers.weapon);
+	int enemyHealth = ent->client->zc.target_visible ? target->health :
+	                  ent->client->zc.target_last_seen_health;
+	int enemyArmor = ent->client->zc.target_visible ?
+		target->client->pers.inventory[ITEM_INDEX(FindItem("Jacket Armor"))] +
+		target->client->pers.inventory[ITEM_INDEX(FindItem("Combat Armor"))] +
+		target->client->pers.inventory[ITEM_INDEX(FindItem("Body Armor"))] : 0;
+	int enemyWeapon = ent->client->zc.target_visible ? Get_KindWeapon(target->client->pers.weapon) :
+	                  ent->client->zc.target_last_seen_weapon;
 	int enemyPower = enemyHealth + (enemyArmor * 2) + (enemyWeapon * 15);
 
 	if (enemyPower <= 0)
@@ -2568,9 +2626,13 @@ static void Bot_DebugAI (edict_t *ent)
 	if (!weapon)
 		weapon = "-";
 
-	gi.dprintf("bot_ai slot=%d name=%s goal=%s reason=%s score=%.0f target=%s visible=%d weapon=%s role=%d route=%s:%d recovery=%d\n",
+	gi.dprintf("bot_ai slot=%d name=%s goal=%s reason=%s score=%.0f commit=%.1f target=%s visible=%d confidence=%.2f weapon=%s selected=%d utility=%.0f action=%d move=%d role=%d route=%s:%d recovery=%d\n",
 	           slot, ent->client->pers.netname, Bot_GoalName(zc->ai_goal),
-	           Bot_ReasonName(zc->ai_reason), zc->ai_goal_score, target, zc->target_visible, weapon,
+	           Bot_ReasonName(zc->ai_reason), zc->ai_goal_score,
+	           zc->ai_goal_commit_time > level.time ? zc->ai_goal_commit_time - level.time : 0,
+	           target, zc->target_visible, zc->target_confidence, weapon,
+	           zc->selected_weapon, zc->selected_weapon_score, zc->weapon_action,
+	           zc->combat_move_choice,
 	           Bot_IsObjectiveCTF() ? zc->ctfstate : zc->tmplstate,
 	           zc->route_trace ? "on" : "off", zc->routeindex,
 	           zc->route_recovery_attempts);
@@ -3175,6 +3237,13 @@ DCHCANC: //しゃがみっぱなし
 				//				if(zc->route_trace) Search_NearlyPod(ent);
 			}
 		}
+	}
+	if (!zc->second_target && (zc->ai_goal == BOT_GOAL_ITEM ||
+	                          zc->ai_goal == BOT_GOAL_OBJECTIVE)) {
+		zc->ai_goal = BOT_GOAL_NONE;
+		zc->ai_reason = BOT_REASON_NONE;
+		zc->ai_goal_score = 0;
+		zc->ai_goal_commit_time = 0;
 	}
 	//	if(zc->route_trace && (zc->zcstate & STS_LADDERUP)) zc->rt_locktime = level.time + FRAMETIME * POD_LOCKFRAME;
 	if (zc->route_trace) {

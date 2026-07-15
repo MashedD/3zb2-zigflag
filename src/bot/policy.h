@@ -30,6 +30,21 @@ typedef enum {
 	BOT_WEAPON_OTHER
 } bot_policy_weapon_kind_t;
 
+typedef enum {
+	BOT_WEAPON_UNAVAILABLE,
+	BOT_WEAPON_SWITCHING,
+	BOT_WEAPON_BLOCKED,
+	BOT_WEAPON_FIRED
+} bot_weapon_action_t;
+
+typedef enum {
+	BOT_MOVE_HOLD,
+	BOT_MOVE_FORWARD,
+	BOT_MOVE_BACK,
+	BOT_MOVE_LEFT,
+	BOT_MOVE_RIGHT
+} bot_policy_move_kind_t;
+
 typedef struct {
 	float distance;
 	int health;
@@ -74,6 +89,32 @@ typedef struct {
 } bot_policy_route_t;
 
 typedef struct {
+	bot_policy_move_kind_t kind;
+	float range_error;
+	float objective_progress;
+	bot_policy_bool_t cover;
+	bot_policy_bool_t exposed;
+	bot_policy_bool_t hazard;
+	bot_policy_bool_t teammate_crowded;
+} bot_policy_move_t;
+
+typedef struct {
+	float base_score;
+	float travel_cost;
+	float confidence;
+	bot_policy_bool_t urgent;
+	bot_policy_bool_t committed;
+} bot_policy_goal_t;
+
+typedef struct {
+	int offence;
+	int teamwork;
+	float carrier_distance;
+	bot_policy_bool_t defender;
+	bot_policy_bool_t supporter;
+} bot_policy_role_t;
+
+typedef struct {
 	int defenders;
 	int supporters;
 } bot_policy_ctf_quota_t;
@@ -85,5 +126,10 @@ float BotPolicy_ItemScore(const bot_policy_item_t *item);
 float BotPolicy_WeaponScore(const bot_policy_weapon_t *weapon);
 float BotPolicy_RouteScore(const bot_policy_route_t *route);
 bot_policy_ctf_quota_t BotPolicy_CTFQuota(int team_size, bot_policy_bool_t has_carrier);
+float BotPolicy_MemoryConfidence(float age, int estimate_skill, bot_policy_bool_t visible);
+float BotPolicy_MoveScore(const bot_policy_move_t *move);
+float BotPolicy_GoalScore(const bot_policy_goal_t *goal);
+float BotPolicy_RoleScore(const bot_policy_role_t *role);
+float BotPolicy_ProjectileLead(float distance, float projectile_speed, int aim_skill);
 
 #endif

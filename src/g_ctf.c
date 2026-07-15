@@ -3097,24 +3097,36 @@ static void CTFJobAssignTeam (int team, gitem_t *enemy_flag)
 	int i, bots = 0, defenders = 0, supporters = 0;
 	edict_t *best_defender = NULL, *best_attacker = NULL, *best_supporter = NULL;
 	edict_t *carrier = NULL, *extra_supporter = NULL;
-	int lowest_offence = 10, highest_offence = -1;
-	int highest_teamwork = -1;
+	float defender_score = BOT_POLICY_REJECTED;
+	float attacker_score = BOT_POLICY_REJECTED;
+	float supporter_score = BOT_POLICY_REJECTED;
+	float weakest_supporter_score = 1000000.0f;
 	bot_policy_ctf_quota_t quota;
+
+	/* Locate the carrier first so every support candidate is scored against the
+	 * same objective context, independent of client iteration order. */
+	for (i = 1; i <= (int)maxclients->value; i++) {
+		edict_t *bot = &g_edicts[i];
+		if (!bot->inuse || !ENT_IS_BOT(bot) || bot->client->resp.ctf_team != team)
+			continue;
+		bots++;
+		if (enemy_flag && bot->client->pers.inventory[ITEM_INDEX(enemy_flag)])
+			carrier = bot;
+	}
 
 	for (i = 1; i <= (int)maxclients->value; i++) {
 		edict_t *bot = &g_edicts[i];
 		gclient_t *client;
-		int offence;
+		bot_policy_role_t role = {0};
+		float score;
+		vec3_t delta;
 
 		if (!bot->inuse || !ENT_IS_BOT(bot) || bot->client->resp.ctf_team != team)
 			continue;
 		client = bot->client;
-		bots++;
-
-		if (enemy_flag && client->pers.inventory[ITEM_INDEX(enemy_flag)]) {
+		if (bot == carrier) {
 			client->zc.ctfstate = CTFS_CARRIER;
 			client->zc.followmate = NULL;
-			carrier = bot;
 			continue;
 		}
 		if (client->zc.ctfstate == CTFS_CARRIER) {
@@ -3127,24 +3139,38 @@ static void CTFJobAssignTeam (int team, gitem_t *enemy_flag)
 			defenders++;
 		if (client->zc.ctfstate == CTFS_SUPPORTER) {
 			supporters++;
-			extra_supporter = bot;
 		}
 
 		if (client->zc.ctf_role_time > level.time)
 			continue;
-		offence = Bot[client->zc.botindex].param[BOP_OFFENCE];
-		if (client->zc.ctfstate != CTFS_DEFENDER && offence < lowest_offence) {
-			lowest_offence = offence;
+		role.offence = Bot[client->zc.botindex].param[BOP_OFFENCE];
+		role.teamwork = Bot[client->zc.botindex].param[BOP_TEAMWORK];
+		if (carrier) {
+			VectorSubtract(carrier->s.origin, bot->s.origin, delta);
+			role.carrier_distance = VectorLength(delta);
+		}
+		role.defender = true;
+		score = BotPolicy_RoleScore(&role);
+		if (client->zc.ctfstate != CTFS_DEFENDER && score > defender_score) {
+			defender_score = score;
 			best_defender = bot;
 		}
-		if (client->zc.ctfstate == CTFS_DEFENDER && offence > highest_offence) {
-			highest_offence = offence;
+		role.defender = false;
+		role.supporter = false;
+		score = BotPolicy_RoleScore(&role);
+		if (client->zc.ctfstate == CTFS_DEFENDER && score > attacker_score) {
+			attacker_score = score;
 			best_attacker = bot;
 		}
-		if (client->zc.ctfstate == CTFS_OFFENCER &&
-		    Bot[client->zc.botindex].param[BOP_TEAMWORK] > highest_teamwork) {
-			highest_teamwork = Bot[client->zc.botindex].param[BOP_TEAMWORK];
+		role.supporter = true;
+		score = BotPolicy_RoleScore(&role);
+		if (client->zc.ctfstate == CTFS_OFFENCER && score > supporter_score) {
+			supporter_score = score;
 			best_supporter = bot;
+		}
+		if (client->zc.ctfstate == CTFS_SUPPORTER && score < weakest_supporter_score) {
+			weakest_supporter_score = score;
+			extra_supporter = bot;
 		}
 	}
 
