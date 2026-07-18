@@ -76,6 +76,29 @@ float BotPolicy_ItemScore(const bot_policy_item_t *item)
 	return score;
 }
 
+/* When a bot is effectively unarmed, acquisition distance is more important
+ * than weapon preference.  Keep this separate from combat weapon scoring so
+ * a distant preferred weapon cannot make a bot ignore a nearby weapon. */
+float BotPolicy_WeaponPickupScore(float distance, int pickup_skill,
+	bot_policy_bool_t preferred_weapon, bot_policy_bool_t dropped)
+{
+	float score = 10000.0f;
+
+	if (distance < 0)
+		distance = 0;
+	if (pickup_skill < 0)
+		pickup_skill = 0;
+	if (pickup_skill > 9)
+		pickup_skill = 9;
+
+	score -= distance * (1.0f - pickup_skill * 0.02f);
+	if (preferred_weapon)
+		score += 20.0f;
+	if (dropped)
+		score += 10.0f;
+	return score;
+}
+
 float BotPolicy_WeaponScore(const bot_policy_weapon_t *weapon)
 {
 	float score = weapon->preference * 25.0f;

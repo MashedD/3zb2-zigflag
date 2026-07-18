@@ -123,6 +123,8 @@ float BotPolicy_TargetScore(const bot_policy_target_t *target);
 bot_policy_bool_t BotPolicy_ShouldSwitchTarget(float current_score, float candidate_score,
 	bot_policy_bool_t target_lock_active, bot_policy_bool_t urgent);
 float BotPolicy_ItemScore(const bot_policy_item_t *item);
+float BotPolicy_WeaponPickupScore(float distance, int pickup_skill,
+	bot_policy_bool_t preferred_weapon, bot_policy_bool_t dropped);
 float BotPolicy_WeaponScore(const bot_policy_weapon_t *weapon);
 float BotPolicy_RouteScore(const bot_policy_route_t *route);
 bot_policy_ctf_quota_t BotPolicy_CTFQuota(int team_size, bot_policy_bool_t has_carrier);

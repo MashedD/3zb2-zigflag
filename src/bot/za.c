@@ -273,8 +273,36 @@ static float Bot_ItemPriority (edict_t *ent, edict_t *item, float distance, int 
 static bool Bot_CanDetourForItems (edict_t *ent)
 {
 	zgcl_t *zc = &ent->client->zc;
+	gitem_t *weapons[] = {
+		NULL, Fdi_SHOTGUN, Fdi_SUPERSHOTGUN, Fdi_MACHINEGUN,
+		Fdi_CHAINGUN, Fdi_GRENADELAUNCHER, Fdi_ROCKETLAUNCHER,
+		Fdi_HYPERBLASTER, Fdi_RAILGUN, Fdi_BFG, Fdi_PHALANX,
+		Fdi_BOOMER
+	};
+	int i;
+	bool has_weapon = false;
 
-	if (zc->first_target && ent->health >= 35)
+	/* A bot carrying only the blaster must still be allowed to look for a
+	 * weapon while an enemy is visible.  The item search limits this exception
+	 * to very close weapons during an active fight. */
+	for (i = 1; i < (int)(sizeof(weapons) / sizeof(weapons[0])); i++) {
+		gitem_t *weapon = weapons[i];
+		gitem_t *ammo;
+
+		if (!weapon || !ent->client->pers.inventory[ITEM_INDEX(weapon)])
+			continue;
+		if (!weapon->ammo || !weapon->ammo[0]) {
+			has_weapon = true;
+			break;
+		}
+		ammo = FindItem(weapon->ammo);
+		if (ammo && ent->client->pers.inventory[ITEM_INDEX(ammo)] > 0) {
+			has_weapon = true;
+			break;
+		}
+	}
+
+	if (zc->first_target && ent->health >= 35 && has_weapon)
 		return false;
 	if (Bot_IsObjectiveCTF() &&
 	    (zc->ctfstate == CTFS_CARRIER || zc->ctfstate == CTFS_SUPPORTER))
@@ -666,6 +694,7 @@ void Bot_SearchItems (edict_t *ent)
 	int best_item_reason;
 
 	int i, j, k, conts;
+	bool unarmed;
 
 	trace_t rs_trace;
 
@@ -673,6 +702,8 @@ void Bot_SearchItems (edict_t *ent)
 	best_item = NULL;
 	best_item_score = -999999.0f;
 	best_item_reason = BOT_REASON_NONE;
+	unarmed = !Bot_CanDetourForItems(ent) ? false :
+		Get_KindWeapon(ent->client->pers.weapon) <= WEAP_BLASTER;
 
 
 	if ((zc->tmpcount++) & 1)
@@ -1096,7 +1127,26 @@ void Bot_SearchItems (edict_t *ent)
 
 			if (target != NULL) {
 				int reason;
-				float score = Bot_ItemPriority(ent, target, yaw, &reason);
+				float score;
+				bool isWeapon = target->classname && target->classname[0] == 'w';
+
+				/* In the unarmed state, weapon acquisition is its own goal.  A
+				 * close weapon may interrupt combat, but a distant one must wait
+				 * until the current fight is over. */
+				if (unarmed && isWeapon && zc->first_target && yaw >= 150.0f)
+					target = NULL;
+				if (!target)
+					continue;
+				if (unarmed && isWeapon) {
+					int weapon = Get_KindWeapon(target->item);
+					int preferred = weapon == Bot[ent->client->zc.botindex].param[BOP_PRIWEP];
+					int dropped = target->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM);
+					score = BotPolicy_WeaponPickupScore(yaw,
+						Bot[ent->client->zc.botindex].param[BOP_PICKUP],
+						preferred, dropped);
+					reason = BOT_REASON_ITEM_UPGRADE;
+				} else
+					score = Bot_ItemPriority(ent, target, yaw, &reason);
 				if (score > best_item_score) {
 					best_item = target;
 					best_item_score = score;
@@ -3542,7 +3592,7 @@ DCHCANC: //しゃがみっぱなし
 		}
 
 		if (1 /*!k*/) {
-			if (zc->secondinterval > 40) {
+			if (zc->secondinterval > searchInterval) {
 				if (!(zc->zcstate & STS_WAITSMASK)) {
 					Bot_SearchItems(ent);
 					if (zc->second_target != NULL && pickup_pri) {
@@ -3561,7 +3611,7 @@ DCHCANC: //しゃがみっぱなし
 			}
 		}
 
-		if (zc->secondinterval > 40 /*zc->second_target != NULL*/ /*&& !k*/) {
+		if (zc->secondinterval > searchInterval /*zc->second_target != NULL*/ /*&& !k*/) {
 			zc->secondinterval = Bot[zc->botindex].param[BOP_PICKUP] * 4;
 			if (zc->secondinterval > 36)
 				zc->secondinterval = 36;

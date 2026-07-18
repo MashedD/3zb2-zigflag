@@ -996,7 +996,11 @@ void Touch_Item (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf
 		if (ent->item->use) {
 			k = Get_KindWeapon(ent->item);
 			if (k > WEAP_BLASTER) {
-				if (Bot[other->client->zc.botindex].param[BOP_PRIWEP] == k)
+				/* A bot with only its fallback blaster should immediately use
+				 * any usable weapon it finds.  Once armed, preserve the existing
+				 * primary/secondary preference behavior. */
+				if (Get_KindWeapon(other->client->pers.weapon) <= WEAP_BLASTER ||
+				    Bot[other->client->zc.botindex].param[BOP_PRIWEP] == k)
 					ent->item->use(other, ent->item);
 				else if (k != Get_KindWeapon(other->client->pers.weapon)) {
 					if (Bot[other->client->zc.botindex].param[BOP_SECWEP] == k)

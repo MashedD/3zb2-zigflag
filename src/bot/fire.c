@@ -1160,6 +1160,69 @@ static bool Bot_DirectCorridorSafe (edict_t *ent, edict_t *target)
 	return tr.ent == target || tr.fraction == 1.0f;
 }
 
+static bool Bot_HasSafeNonBlasterWeapon (edict_t *ent, edict_t *target)
+{
+	static const int weapons[] = {
+		WEAP_SHOTGUN, WEAP_SUPERSHOTGUN, WEAP_MACHINEGUN,
+		WEAP_CHAINGUN, WEAP_GRENADES, WEAP_GRENADELAUNCHER,
+		WEAP_ROCKETLAUNCHER, WEAP_HYPERBLASTER, WEAP_RAILGUN,
+		WEAP_BFG, WEAP_PHALANX, WEAP_BOOMER, WEAP_TRAP
+	};
+	int i;
+
+	for (i = 0; i < (int)(sizeof(weapons) / sizeof(weapons[0])); i++) {
+		int weapon = weapons[i];
+		float splash = Bot_WeaponSplash(weapon);
+
+		if (Bot_WeaponShots(ent, weapon) <= 0)
+			continue;
+		if (splash > 0 && !Bot_ClearShot(ent, target, splash))
+			continue;
+		if (splash <= 0 && !Bot_DirectCorridorSafe(ent, target))
+			continue;
+		return true;
+	}
+	return false;
+}
+
+static int Bot_RankWeapons (edict_t *ent, edict_t *target, float distance,
+	int *ordered, float *scores, int capacity);
+
+/* Legacy combat states can fire before the utility selector below gets a
+ * turn.  Do the weapon handoff first whenever the bot is still holding its
+ * fallback blaster, otherwise those states can continue attacking with the
+ * blaster while a real weapon is already available. */
+static bool Bot_EnsureCombatWeapon (edict_t *ent, edict_t *target, float distance)
+{
+	zgcl_t *zc = &ent->client->zc;
+	int ordered[16];
+	float scores[16];
+	int count, i;
+
+	if (Get_KindWeapon(ent->client->pers.weapon) != WEAP_BLASTER)
+		return false;
+	if (ent->client->newweapon)
+		return true;
+
+	count = Bot_RankWeapons(ent, target, distance, ordered, scores, 16);
+	for (i = 0; i < count; i++) {
+		int action;
+
+		if (ordered[i] == WEAP_BLASTER || scores[i] <= BOT_POLICY_REJECTED)
+			continue;
+		action = CanUsewep(ent, ordered[i]);
+		if (!action)
+			continue;
+
+		zc->selected_weapon = ordered[i];
+		zc->selected_weapon_score = scores[i];
+		zc->weapon_action = BOT_WEAPON_SWITCHING;
+		ent->client->buttons &= ~BUTTON_ATTACK;
+		return true;
+	}
+	return false;
+}
+
 static bot_weapon_action_t Bot_FireUtilityWeapon (edict_t *ent, edict_t *target,
 	int weapon, int enewep, float aim, float distance, int skill)
 {
@@ -1342,8 +1405,10 @@ void Combat_LevelX (edict_t *ent, int foundedenemy, int enewep, float aim, float
 	vec3_t v;
 
 	client = ent->client;
-	zc = &client->zc;
+	 zc = &client->zc;
 	target = zc->first_target;
+	if (target && Bot_EnsureCombatWeapon(ent, target, distance))
+		return;
 
 	//-----------------------------------------------------------------------
 	//ステータスを反映
@@ -2142,8 +2207,10 @@ void Combat_Level0 (edict_t *ent, int foundedenemy, int enewep, float aim, float
 		if (B_UseTrap(ent, target, enewep, aim, distance, skill))
 			goto FIRED;
 	}
-	//Blaster
-	if (distance < 1200) {
+	/* Blaster is a last resort.  If an inventory weapon is available and has
+	 * a safe firing corridor, the ranked selector above should be given the
+	 * chance to use it instead of silently falling back to blaster. */
+	if (distance < 1200 && !Bot_HasSafeNonBlasterWeapon(ent, target)) {
 		if (B_UseBlaster(ent, target, enewep, aim, distance, skill))
 			goto FIRED;
 	}

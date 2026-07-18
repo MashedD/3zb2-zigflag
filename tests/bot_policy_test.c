@@ -38,6 +38,10 @@ int main(void)
 	CHECK(BotPolicy_ShouldSwitchTarget(1000.0f, 1001.0f, true, true));
 	CHECK(BotPolicy_ItemScore(&health) > 400.0f);
 	CHECK(BotPolicy_ItemScore(&ammo) == BOT_POLICY_REJECTED);
+	CHECK(BotPolicy_WeaponPickupScore(80.0f, 5, false, false) >
+	      BotPolicy_WeaponPickupScore(500.0f, 9, true, false));
+	CHECK(BotPolicy_WeaponPickupScore(80.0f, 5, false, false) >
+	      BotPolicy_ItemScore(&health));
 	CHECK(BotPolicy_WeaponScore(&far_rail) > BotPolicy_WeaponScore(&far_shotgun));
 	CHECK(BotPolicy_WeaponScore(&close_rocket) < 0.0f);
 	close_rocket.splash_unsafe = true;
