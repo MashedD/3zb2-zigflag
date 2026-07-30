@@ -950,6 +950,9 @@ void Touch_Item (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf
 {
 	int k;
 
+	if (!ent->inuse || !ent->item || !ent->item->pickup)
+		return;
+
 	//don't pickup tech when chaining
 	if (ctf->value && chedit->value) {
 		if (ent->classname[5] == 't')
@@ -973,8 +976,6 @@ void Touch_Item (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf
 	}
 	if (other->health < 1)
 		return; // dead people can't pickup
-	if (!ent->item->pickup)
-		return; // not a grabbable item?
 	if (!ent->item->pickup(ent, other))
 		return; // player can't hold it
 

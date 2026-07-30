@@ -312,6 +312,55 @@ static bool Bot_CanDetourForItems (edict_t *ent)
 	return true;
 }
 
+static bool Bot_IsUnarmed (edict_t *ent)
+{
+	return Get_KindWeapon(ent->client->pers.weapon) <= WEAP_BLASTER;
+}
+
+/* Find a real weapon independently of the legacy classname parser.  The
+ * normal item search is intentionally broad and can prefer health, ammo, or
+ * route items; this path exists only for a bot that still needs a weapon. */
+static edict_t *Bot_FindNearestWeapon (edict_t *ent)
+{
+	edict_t *best = NULL;
+	float best_distance = 768.0f;
+	int i;
+
+	for (i = (int)maxclients->value + 1; i < globals.num_edicts; i++) {
+		edict_t *candidate = &g_edicts[i];
+		vec3_t delta;
+		float distance;
+		bool dropped;
+
+		if (!candidate->inuse || candidate->solid != SOLID_TRIGGER ||
+		    !candidate->item || !(candidate->item->flags & IT_WEAPON))
+			continue;
+		if (candidate->owner && ENT_IS_BOT(candidate->owner) && candidate->target_ent &&
+		    !ENT_IS_BOT(candidate->target_ent))
+			continue;
+
+		dropped = (candidate->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM)) != 0;
+		if (!dropped && (int)dmflags->value & DF_WEAPONS_STAY &&
+		    ent->client->pers.inventory[ITEM_INDEX(candidate->item)])
+			continue;
+		if (!dropped && ent->client->pers.inventory[ITEM_INDEX(candidate->item)])
+			continue;
+
+		VectorSubtract(candidate->s.origin, ent->s.origin, delta);
+		distance = VectorLength(delta);
+		if (distance >= best_distance || fabs(delta[2]) > JumpMax + 32.0f)
+			continue;
+		if (gi.pointcontents(candidate->s.origin) & (CONTENTS_LAVA | CONTENTS_SLIME))
+			continue;
+		if (!Bot_trace(ent, candidate))
+			continue;
+
+		best = candidate;
+		best_distance = distance;
+	}
+	return best;
+}
+
 static int Bot_SharedAmmoReserve (edict_t *ent, gitem_t *donated, gitem_t *ammo)
 {
 	gitem_t *weapons[] = {
@@ -1128,7 +1177,7 @@ void Bot_SearchItems (edict_t *ent)
 			if (target != NULL) {
 				int reason;
 				float score;
-				bool isWeapon = target->classname && target->classname[0] == 'w';
+				bool isWeapon = target->item && (target->item->flags & IT_WEAPON);
 
 				/* In the unarmed state, weapon acquisition is its own goal.  A
 				 * close weapon may interrupt combat, but a distant one must wait
@@ -2811,7 +2860,10 @@ static void Bot_RecoverRoute (edict_t *ent)
 		best_score = score;
 	}
 
-	zc->second_target = NULL;
+	/* Route recovery must not discard an active weapon-acquisition goal. */
+	if (!(Bot_IsUnarmed(ent) && zc->second_target && zc->second_target->inuse &&
+	      zc->second_target->item && (zc->second_target->item->flags & IT_WEAPON)))
+		zc->second_target = NULL;
 	zc->havetarget = false;
 	if (best >= 0) {
 		zc->routeindex = best;
@@ -3594,8 +3646,25 @@ DCHCANC: //しゃがみっぱなし
 		if (1 /*!k*/) {
 			if (zc->secondinterval > searchInterval) {
 				if (!(zc->zcstate & STS_WAITSMASK)) {
-					Bot_SearchItems(ent);
-					if (zc->second_target != NULL && pickup_pri) {
+					edict_t *nearest_weapon = NULL;
+
+					if (needBetterWeapon)
+						nearest_weapon = Bot_FindNearestWeapon(ent);
+					if (nearest_weapon) {
+						zc->second_target = nearest_weapon;
+						zc->ai_goal = BOT_GOAL_ITEM;
+						zc->ai_reason = BOT_REASON_ITEM_UPGRADE;
+						zc->ai_goal_score = 10000.0f;
+						zc->ai_goal_commit_time = level.time + 1.0f;
+						/* The item movement phase must take control from the
+						 * current route/combat direction this frame. */
+						trace_priority = TRP_NORMAL;
+					} else
+						Bot_SearchItems(ent);
+					/* A blaster-only bot must be allowed to leave its route for a
+					 * real weapon.  Route cleanup may discard ordinary detours, but
+					 * not an unarmed weapon-acquisition goal. */
+					if (zc->second_target != NULL && pickup_pri && !needBetterWeapon) {
 						for (i = zc->routeindex; i < (zc->routeindex + 20); i++) {
 							if (i >= CurrentIndex)
 								break;

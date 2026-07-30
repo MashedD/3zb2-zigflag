@@ -891,6 +891,10 @@ bool B_UseGrenadeLauncher (edict_t *ent, edict_t *target, int enewep, float aim,
 
 	client = ent->client;
 	zc = &client->zc;
+	/* A target substantially above the bot is not a sensible grenade
+	 * trajectory; use a direct-fire weapon or reposition instead. */
+	if (target->s.origin[2] > ent->s.origin[2] + 64.0f)
+		return false;
 
 	if (CanUsewep(ent, WEAP_GRENADELAUNCHER)) {
 		mywep = Get_KindWeapon(client->pers.weapon);
@@ -1027,6 +1031,8 @@ bool B_UseHandGrenade (edict_t *ent, edict_t *target, int enewep, float aim, flo
 	gclient_t *client;
 
 	client = ent->client;
+	if (target->s.origin[2] > ent->s.origin[2] + 64.0f)
+		return false;
 
 	if (CanUsewep(ent, WEAP_GRENADES)) {
 		mywep = Get_KindWeapon(client->pers.weapon);
@@ -1176,6 +1182,9 @@ static bool Bot_HasSafeNonBlasterWeapon (edict_t *ent, edict_t *target)
 
 		if (Bot_WeaponShots(ent, weapon) <= 0)
 			continue;
+		if ((weapon == WEAP_GRENADES || weapon == WEAP_GRENADELAUNCHER) &&
+		    target->s.origin[2] > ent->s.origin[2] + 64.0f)
+			continue;
 		if (splash > 0 && !Bot_ClearShot(ent, target, splash))
 			continue;
 		if (splash <= 0 && !Bot_DirectCorridorSafe(ent, target))
@@ -1273,6 +1282,12 @@ static int Bot_RankWeapons (edict_t *ent, edict_t *target, float distance,
 	for (i = 0; i < (int)(sizeof(weapons) / sizeof(weapons[0])) && count < capacity; i++) {
 		bot_policy_weapon_t policy = {0};
 		int weapon = weapons[i];
+		if ((weapon == WEAP_GRENADES || weapon == WEAP_GRENADELAUNCHER) &&
+		    target->s.origin[2] > ent->s.origin[2] + 64.0f) {
+			ordered[count] = weapon;
+			scores[count++] = BOT_POLICY_REJECTED;
+			continue;
+		}
 		policy.kind = Bot_PolicyWeaponKind(weapon);
 		policy.distance = distance;
 		policy.available_shots = Bot_WeaponShots(ent, weapon);
@@ -1311,7 +1326,9 @@ static void Bot_SelectCombatMove (edict_t *ent, edict_t *target, int skill)
 	zgcl_t *zc = &ent->client->zc;
 	vec3_t to_target, route_point;
 	float base_yaw, ideal = 420.0f, best_score = BOT_POLICY_REJECTED;
-	int weapon = zc->selected_weapon ? zc->selected_weapon : Get_KindWeapon(ent->client->pers.weapon);
+	int current_weapon = Get_KindWeapon(ent->client->pers.weapon);
+	int weapon = current_weapon == WEAP_BLASTER ? current_weapon :
+	             (zc->selected_weapon ? zc->selected_weapon : current_weapon);
 	int best = BOT_MOVE_HOLD, i;
 
 	if (!ent->groundentity || ent->waterlevel >= 2 || level.time < zc->combat_move_time)
@@ -1323,6 +1340,30 @@ static void Bot_SelectCombatMove (edict_t *ent, edict_t *target, int skill)
 	else if (weapon == WEAP_ROCKETLAUNCHER || weapon == WEAP_GRENADELAUNCHER)
 		ideal = 500.0f;
 	VectorSubtract(target->s.origin, ent->s.origin, to_target);
+
+	/* Do not walk into an enemy with only the fallback blaster.  If item
+	 * search has found a weapon, move toward that item; otherwise create space
+	 * so the normal item search can acquire one instead of pushing into combat. */
+	if (weapon == WEAP_BLASTER && !Bot_HasSafeNonBlasterWeapon(ent, target)) {
+		if (zc->second_target && zc->second_target->inuse &&
+		    zc->second_target->classname && zc->second_target->classname[0] == 'w') {
+			VectorSubtract(zc->second_target->s.origin, ent->s.origin, to_target);
+			base_yaw = Get_yaw(to_target);
+			zc->combat_move_choice = BOT_MOVE_FORWARD;
+			/* Let the item movement phase below replace route movement with
+			 * the weapon goal on this frame. */
+			trace_priority = TRP_NORMAL;
+		} else {
+			base_yaw = Get_yaw(to_target) + 180.0f;
+			zc->combat_move_choice = BOT_MOVE_BACK;
+			trace_priority = TRP_MOVEKEEP;
+		}
+		if (base_yaw > 180.0f) base_yaw -= 360.0f;
+		if (base_yaw < -180.0f) base_yaw += 360.0f;
+		zc->moveyaw = base_yaw;
+		zc->combat_move_time = level.time + 0.2f;
+		return;
+	}
 	base_yaw = Get_yaw(to_target);
 	VectorClear(route_point);
 	if (zc->route_trace && zc->routeindex + 1 < CurrentIndex)
