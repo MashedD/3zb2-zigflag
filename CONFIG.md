@@ -58,6 +58,7 @@ Route chain files (`.chn`/`.chf`) contain object and level navigation data. See 
 | `chaingib_ammo_regen_rate` | Bullets restored per second | `10` |
 | `chaingib_ammo_spawn` | Bullets granted on the next spawn | `100` |
 | `chaingib_ammo_cap` | Maximum regenerated bullets | `200` |
+| `g_hit_sound` | Sound played to a player who hits someone, for clients without re-release hit markers (older Q2PRO, R1Q2), e.g. `misc/talk1.wav`. Clients whose userinfo has `cl_hit_markers` above 0 get the hit marker instead; bots get neither | `""` (off) |
 
 ## Server Commands
 
