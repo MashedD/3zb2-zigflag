@@ -1,0 +1,96 @@
+name: Build and release
+
+# Every push and pull request builds the game libraries for Linux x86_64 and
+# 32-bit and 64-bit Windows and runs the tests. Pushing a vMAJOR.MINOR.PATCH
+# tag also publishes a release with a ready to extract 3zb2 directory for each
+# platform, the bare libraries for updating an install, and checksums.
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # Libraries built on the oldest supported Ubuntu need only glibc 2.35,
+    # which every current distribution has. Windows libraries are cross
+    # compiled with MinGW-w64 and need only DLLs that come with Windows.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux64
+            cc: gcc
+            make: ''
+            built: game.so
+            output: gamex86_64.so
+            strip: strip
+          - platform: win32
+            cc: i686-w64-mingw32-gcc
+            make: FORCE_OSTYPE=Windows
+            built: game.dll
+            output: gamex86.dll
+            strip: i686-w64-mingw32-strip
+          - platform: win64
+            cc: x86_64-w64-mingw32-gcc
+            make: FORCE_OSTYPE=Windows
+            built: game.dll
+            output: gamex86_64.dll
+            strip: x86_64-w64-mingw32-strip
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential zip gcc-mingw-w64-i686 gcc-mingw-w64-x86-64
+      - name: Run tests
+        if: matrix.platform == 'linux64'
+        run: make test
+      - name: Build library
+        run: |
+          make CC=${{ matrix.cc }} ${{ matrix.make }} -j"$(nproc)"
+          mkdir -p dist
+          cp release/${{ matrix.built }} dist/${{ matrix.output }}
+          ${{ matrix.strip }} --strip-unneeded dist/${{ matrix.output }}
+          chmod ${{ matrix.platform == 'linux64' && '755' || '644' }} dist/${{ matrix.output }}
+      - name: Package mod directory
+        run: |
+          version=${GITHUB_REF_NAME}
+          [ "$GITHUB_REF_TYPE" = tag ] || version=$(git rev-parse --short HEAD)
+          mkdir pkg
+          cp -r 3zb2 pkg/
+          cp dist/${{ matrix.output }} CONFIG.md README.md LICENSE pkg/3zb2/
+          (cd pkg && zip -q -r -X ../dist/3zb2-${{ matrix.platform }}-$version.zip 3zb2)
+      - uses: actions/upload-artifact@v7
+        with:
+          name: 3zb2-${{ matrix.platform }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Generate checksums
+        run: cd dist && sha256sum -- * > SHA256SUMS
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --generate-notes --title "$GITHUB_REF_NAME"
