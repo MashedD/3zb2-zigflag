@@ -32,6 +32,7 @@ cvar_t *maxclients;
 cvar_t *maxspectators;
 cvar_t *maxentities;
 cvar_t *g_select_empty;
+cvar_t *g_hit_sound;
 cvar_t *dedicated;
 
 cvar_t *sv_maxvelocity;
