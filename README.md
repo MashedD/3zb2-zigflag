@@ -45,8 +45,8 @@ See [CONFIG.md](CONFIG.md) for full configuration details.
 
 ## Installation
 
-1. Download the latest release from [Releases](https://github.com/MashedD/3zb2-zigflag/releases).
-2. Extract the mod files into your Quake II directory alongside other mods (e.g., `baseq2`, `ctf`).
+1. Download the latest release from [Releases](https://github.com/MashedD/3zb2-zigflag/releases): `3zb2-linux64-*.zip`, `3zb2-win32-*.zip` or `3zb2-win64-*.zip`. To update an install, the bare game libraries (`gamex86_64.so`, `gamex86.dll`, `gamex86_64.dll`) are there too.
+2. Extract the zip into your Quake II directory alongside other mods (e.g., `baseq2`, `ctf`); it holds the `3zb2` directory with the game library.
 3. Some features require assets from the base game:
    - **CTF / Grapple**: Copy `ctf/pak*.pak` into the `3zb2/` directory. Rename existing pak files to avoid conflicts (e.g., `pakX.pak`).
    - **Mission Pack 1 (Reckoning)**: Copy `xatrix/pak0.pak` into `3zb2/`.
