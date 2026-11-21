@@ -205,6 +205,7 @@ void InitGame (void)
 	spectator_password = gi.cvar("spectator_password", "", CVAR_USERINFO);
 	maxspectators = gi.cvar("maxspectators", "4", CVAR_SERVERINFO);
 	g_select_empty = gi.cvar("g_select_empty", "0", CVAR_ARCHIVE);
+	g_hit_sound = gi.cvar("g_hit_sound", "", 0);
 
 	filterban = gi.cvar("filterban", "1", 0);
 
