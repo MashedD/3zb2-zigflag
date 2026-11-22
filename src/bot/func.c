@@ -445,24 +445,6 @@ void PutBotInServer (edict_t *ent)
 			return;
 		}
 		client->pers.inventory[ITEM_INDEX(ammo)] = 50;
-	} else if (chaingib && chaingib->value) {
-		item = FindItem("Chaingun");
-		if (!item) {
-			gi.error("No Chaingun item found");
-			return;
-		}
-		int ammo_cap = chaingib_ammo_cap->value > 0 ? (int)chaingib_ammo_cap->value : 0;
-		int spawn_ammo = chaingib_ammo_spawn->value > 0 ? (int)chaingib_ammo_spawn->value : 0;
-		if (spawn_ammo > ammo_cap)
-			spawn_ammo = ammo_cap;
-		gitem_t *bullets = FindItem("Bullets");
-		gitem_t *armor = FindItem("Body Armor");
-		if (!bullets || !armor) {
-			gi.error("Required chaingib items not found");
-			return;
-		}
-		client->pers.inventory[ITEM_INDEX(bullets)] = spawn_ammo;
-		client->pers.inventory[ITEM_INDEX(armor)] = 100;
 	} else {
 		item = FindItem("Blaster");
 		if (!item) {
@@ -503,7 +485,7 @@ void PutBotInServer (edict_t *ent)
 	client->ctf_grapple = NULL;
 
 	item = FindItem("Grapple");
-	if ((ctf->value || zigrapple->value) && !(chaingib && chaingib->value))
+	if (ctf->value || zigrapple->value)
 		client->pers.inventory[ITEM_INDEX(item)] = 1; //ponpoko
 							      //ZOID
 
@@ -517,7 +499,6 @@ void PutBotInServer (edict_t *ent)
 
 	ent->health = ent->client->pers.health;
 	ent->max_health = ent->client->pers.max_health;
-	ChaingibResetRegeneration(client);
 	ent->gib_health = -40;
 
 	ent->gravity = 1.0;

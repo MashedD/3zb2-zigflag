@@ -51,13 +51,6 @@ Route chain files (`.chn`/`.chf`) contain object and level navigation data. See 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `spectator` | Spectator mode | `0` (off) |
-| `chaingib_health_regen_delay` | Seconds without firing or damage before health regenerates | `3` |
-| `chaingib_health_regen_rate` | Health restored per second | `10` |
-| `chaingib_health_regen_cap` | Maximum regenerated health | `100` |
-| `chaingib_ammo_regen_delay` | Seconds without firing before bullets regenerate | `2` |
-| `chaingib_ammo_regen_rate` | Bullets restored per second | `10` |
-| `chaingib_ammo_spawn` | Bullets granted on the next spawn | `100` |
-| `chaingib_ammo_cap` | Maximum regenerated bullets | `200` |
 | `g_hit_sound` | Sound played to a player who hits someone, for clients without re-release hit markers (older Q2PRO, R1Q2), e.g. `misc/talk1.wav`. Clients whose userinfo has `cl_hit_markers` above 0 get the hit marker instead; bots get neither | `""` (off) |
 
 ## Server Commands
