@@ -1678,7 +1678,7 @@ void SpawnItem (edict_t *ent, gitem_t *item)
 
 	// some items will be prevented in deathmatch
 	if (deathmatch->value) {
-		if ((instagib && instagib->value) || (chaingib && chaingib->value)) {
+		if (instagib && instagib->value) {
 			if (item->pickup == Pickup_Weapon ||
 			    item->pickup == Pickup_Ammo ||
 			    item->pickup == Pickup_Armor ||

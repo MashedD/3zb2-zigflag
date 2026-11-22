@@ -2042,7 +2042,7 @@ void CTFSetupTechSpawn (void)
 {
 	edict_t *ent;
 
-	if (techspawn || ((int)dmflags->value & DF_CTF_NO_TECH) || (chaingib && chaingib->value))
+	if (techspawn || ((int)dmflags->value & DF_CTF_NO_TECH))
 		return;
 
 	ent = G_Spawn();
