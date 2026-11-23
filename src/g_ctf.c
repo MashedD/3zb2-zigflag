@@ -2957,7 +2957,8 @@ void CTFSetupNavSpawn ()
 	memset(Route, 0, sizeof(Route));
 	memset(code, 0, 8);
 
-	if (ctf->value) {
+	// TDM turns ctf on (CTFInit), but plays DM maps with DM routes
+	if (ctf->value && !tdm->value) {
 		dir = "chctf";
 		ext = "chf";
 		gi.dprintf("We are in CTF mode.\n");
@@ -2966,30 +2967,30 @@ void CTFSetupNavSpawn ()
 		ext = "chn";
 	}
 
-	snprintf(name, sizeof(name), "%s/%s/%s/%s.%s", GET_BASEPATH_STR(), gamepath->string, dir, level.mapname, ext);
+	snprintf(name, sizeof(name), "%s/%s/%s/%s.%s", GET_BASEPATH_STR(), GET_GAMEPATH_STR(), dir, level.mapname, ext);
 	fpout = fopen(name, "rb");
 
 	if (fpout == NULL && zigmode->value) {
-		snprintf(name, sizeof(name), "%s/%s/chctf/%s.chf", GET_BASEPATH_STR(), gamepath->string, level.mapname);
+		snprintf(name, sizeof(name), "%s/%s/chctf/%s.chf", GET_BASEPATH_STR(), GET_GAMEPATH_STR(), level.mapname);
 		fpout = fopen(name, "rb");
 		zigctf = 1;
 	}
 
 	if (fpout == NULL) {
-		if (!ctf->value) {
-			gi.dprintf("Chaining: file %s/chdtm/%s.chn not found.\n", gamepath->string, level.mapname);
+		if (!ctf->value || tdm->value) {
+			gi.dprintf("Chaining: file %s/chdtm/%s.chn not found.\n", GET_GAMEPATH_STR(), level.mapname);
 			if (zigmode->value) {
 				gi.dprintf("\nChaining file required for zigmode.\n\n");
 				gi.error("%s", ERR_FATAL ? ERR_FATAL : "CTF nav spawn error");
 			}
 		} else
-			gi.dprintf("Chaining: file %s/chctf/%s.chf not found.\n", gamepath->string, level.mapname);
+			gi.dprintf("Chaining: file %s/chctf/%s.chf not found.\n", GET_GAMEPATH_STR(), level.mapname);
 
 	} else {
 		if (fread(code, sizeof(char), 8, fpout) != 8)
 			gi.error("Error reading 8 bytes into code buffer\n");
 
-		if (ctf->value || zigctf)
+		if ((ctf->value && !tdm->value) || zigctf)
 			memcpy(SRCcode, "3ZBRGCTF", 8);
 		else
 			memcpy(SRCcode, "3ZBRGDTM", 8);

@@ -86,13 +86,13 @@ float ctfjob_update;
 
 void SpawnEntities (char *mapname, char *entities, char *spawnpoint);
 void ClientThink (edict_t *ent, usercmd_t *cmd);
-bool ClientConnect (edict_t *ent, char *userinfo, bool loadgame);
+bool ClientConnect (edict_t *ent, char *userinfo);
 void ClientUserinfoChanged (edict_t *ent, char *userinfo);
 void ClientDisconnect (edict_t *ent);
-void ClientBegin (edict_t *ent, bool loadgame);
+void ClientBegin (edict_t *ent);
 void ClientCommand (edict_t *ent);
 void RunEntity (edict_t *ent);
-void WriteGame (char *filename);
+void WriteGame (char *filename, bool autosave);
 void ReadGame (char *filename);
 void WriteLevel (char *filename);
 void ReadLevel (char *filename);
@@ -231,7 +231,7 @@ void Get_NextMap ()
 	if (!maplist->string)
 		return;
 
-	snprintf(Buff, sizeof(Buff), "%s/%s/3zbmaps.lst", GET_BASEPATH_STR(), gamepath->string);
+	snprintf(Buff, sizeof(Buff), "%s/%s/3zbmaps.lst", GET_BASEPATH_STR(), GET_GAMEPATH_STR());
 	fp = fopen(Buff, "r");
 	if (fp == NULL)
 		return;

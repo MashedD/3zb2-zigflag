@@ -88,7 +88,7 @@ void Load_BotInfo ()
 	gamepath = gi.cvar("game", "0", CVAR_LATCH);
 
 	//load info
-	snprintf(Buff, sizeof(Buff), "%s/%s/3zbconfig.cfg", GET_BASEPATH_STR(), gamepath->string);
+	snprintf(Buff, sizeof(Buff), "%s/%s/3zbconfig.cfg", GET_BASEPATH_STR(), GET_GAMEPATH_STR());
 	fp = fopen(Buff, "rt");
 	if (fp == NULL) {
 		gi.dprintf("3ZB CFG: file not found: %s\n", Buff);
