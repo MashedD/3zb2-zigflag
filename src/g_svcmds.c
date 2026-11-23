@@ -295,16 +295,17 @@ void SaveChain ()
 	}
 
 	//とりあえずCTFだめ
-	if (ctf->value)
-		snprintf(name, sizeof(name), "%s/%s/chctf/%s.chf", GET_BASEPATH_STR(), gamepath->string, level.mapname);
+	// TDM turns ctf on, but plays DM maps with DM routes
+	if (ctf->value && !tdm->value)
+		snprintf(name, sizeof(name), "%s/%s/chctf/%s.chf", GET_BASEPATH_STR(), GET_GAMEPATH_STR(), level.mapname);
 	else
-		snprintf(name, sizeof(name), "%s/%s/chdtm/%s.chn", GET_BASEPATH_STR(), gamepath->string, level.mapname);
+		snprintf(name, sizeof(name), "%s/%s/chdtm/%s.chn", GET_BASEPATH_STR(), GET_GAMEPATH_STR(), level.mapname);
 
 	fpout = fopen(name, "wb");
 	if (fpout == NULL)
 		gi.cprintf(NULL, PRINT_HIGH, "Can't open %s\n", name);
 	else {
-		if (!ctf->value)
+		if (!ctf->value || tdm->value)
 			fwrite("3ZBRGDTM", sizeof(char), 8, fpout);
 		else
 			fwrite("3ZBRGCTF", sizeof(char), 8, fpout);

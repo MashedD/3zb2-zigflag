@@ -20,6 +20,7 @@
 #define GET_BASEPATH_STR() ((strlen(basepath->string)) == 0 ? DEFAULTPATH : basepath->string)
 
 // the "gameversion" client command will print this plus compile date
+#define GET_GAMEPATH_STR() (gamepath->string[0] ? gamepath->string : "baseq2")
 #define GAMEVERSION "baseq2"
 
 // Sedative name
