@@ -56,6 +56,7 @@ set(3zb2-Source
 	src/g_func.c
 	src/g_items.c
 	src/g_main.c
+	src/map_rotation.c
 	src/g_misc.c
 	src/g_monster.c
 	src/g_phys.c
@@ -101,3 +102,7 @@ enable_testing()
 add_executable(bot_policy_test tests/bot_policy_test.c src/bot/policy.c)
 target_include_directories(bot_policy_test PRIVATE src/bot)
 add_test(NAME bot_policy COMMAND bot_policy_test)
+
+add_executable(map_rotation_test tests/map_rotation_test.c src/map_rotation.c)
+target_include_directories(map_rotation_test PRIVATE src)
+add_test(NAME map_rotation COMMAND map_rotation_test)

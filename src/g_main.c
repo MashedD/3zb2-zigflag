@@ -1,3 +1,4 @@
+#include "map_rotation.h"
 #include <float.h>
 #include "header/local.h"
 #include "header/bot.h"
@@ -219,107 +220,24 @@ GetNextMap
 get next map's file name
 =================
 */
-void Get_NextMap ()
+void Get_NextMap(void)
 {
-	FILE *fp;
-	bool firstflag = false;
-	char Buff[MAX_QPATH];
-	char top[MAX_QPATH];
-	char nextmap[MAX_QPATH];
-	int i;
-
-	if (!maplist->string)
+	char path[MAX_OSPATH];
+	if (!maplist->string || !maplist->string[0])
 		return;
 
-	snprintf(Buff, sizeof(Buff), "%s/%s/3zbmaps.lst", GET_BASEPATH_STR(), GET_GAMEPATH_STR());
-	fp = fopen(Buff, "r");
-	if (fp == NULL)
+	int length = snprintf(path, sizeof(path), "%s/%s/3zbmaps.lst", GET_BASEPATH_STR(), GET_GAMEPATH_STR());
+	if (length < 0 || (size_t)length >= sizeof(path))
 		return;
 
-	//search section
-	while (1) {
-		if (fgets(Buff, sizeof(Buff), fp) == NULL)
-			goto NONEXTMAP;
+	FILE *file = fopen(path, "r");
+	if (!file)
+		return;
 
-		if (Buff[0] != '[')
-			continue;
-
-		i = 0;
-		while (1) {
-			if (Buff[i] == ']')
-				Buff[i] = 0;
-
-			if (Buff[i] == 0)
-				break;
-
-			if (++i >= sizeof(Buff)) {
-				Buff[i - 1] = 0;
-				break;
-			}
-		}
-		//compare map section name
-		if (Q_stricmp(&Buff[1], maplist->string) == 0)
-			break;
-	}
-
-	//search current mapname
-	while (1) {
-		if (fgets(Buff, sizeof(Buff), fp) == NULL)
-			goto NONEXTMAP;
-
-		if (Buff[0] == '[') {
-			if (firstflag) {
-				strlcpy(nextmap, top, MAX_QPATH);
-				goto SETNEXTMAP;
-			} else
-				goto NONEXTMAP;
-		}
-
-		if (Buff[0] == 10 || Buff[0] == 13)
-			continue;
-
-		sscanf(Buff, "%s", nextmap);
-
-		if (!firstflag) {
-			firstflag = true;
-			strlcpy(top, nextmap, MAX_QPATH);
-		}
-
-		if (Q_stricmp(level.mapname, nextmap) == 0)
-			break;
-	}
-
-	//search nextmap
-	while (1) {
-		if (fgets(Buff, sizeof(Buff), fp) == NULL) {
-			if (firstflag) {
-				strlcpy(nextmap, top, MAX_QPATH);
-				goto SETNEXTMAP;
-			} else
-				goto NONEXTMAP;
-		}
-
-		if (Buff[0] == '[') {
-			if (firstflag) {
-				strlcpy(nextmap, top, MAX_QPATH);
-				goto SETNEXTMAP;
-			} else
-				goto NONEXTMAP;
-		}
-
-		if (Buff[0] == 10 || Buff[0] == 13 || feof(fp))
-			continue;
-
-		sscanf(Buff, "%s", nextmap);
-		break;
-	}
-SETNEXTMAP:
-
-	strlcpy(level.nextmap, nextmap, MAX_QPATH);
-
-NONEXTMAP:
-	fclose(fp);
+	MapRotation_Next(file, maplist->string, level.mapname, level.nextmap, sizeof(level.nextmap));
+	fclose(file);
 }
+
 /*
 =================
 EndDMLevel
