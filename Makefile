@@ -177,6 +177,7 @@ build/%.o: %.c
 	src/g_func.o \
 	src/g_items.o \
 	src/g_main.o \
+	src/map_rotation.o \
 	src/g_misc.o \
 	src/g_monster.o \
 	src/g_phys.o \
@@ -232,5 +233,11 @@ build/tests/bot_policy_test: tests/bot_policy_test.c src/bot/policy.c src/bot/po
 	${Q}mkdir -p $(@D)
 	${Q}$(CC) $(CFLAGS) -Isrc/bot -o $@ tests/bot_policy_test.c src/bot/policy.c
 
-test: build/tests/bot_policy_test
+build/tests/map_rotation_test: tests/map_rotation_test.c src/map_rotation.c src/map_rotation.h
+	@echo "===> TEST map rotation"
+	${Q}mkdir -p $(@D)
+	${Q}$(CC) $(CFLAGS) -Isrc -o $@ tests/map_rotation_test.c src/map_rotation.c
+
+test: build/tests/bot_policy_test build/tests/map_rotation_test
 	${Q}build/tests/bot_policy_test
+	${Q}build/tests/map_rotation_test
