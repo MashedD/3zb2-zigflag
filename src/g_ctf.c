@@ -2935,146 +2935,148 @@ void ED_CallSpawn (edict_t *ent);
 //	Not only for CTF but also DM
 //
 //------------------------
-void CTFSetupNavSpawn ()
+/* Legacy little-endian files dumped route_t directly. Both layouts have
+ * 24 bytes of vectors/link data before the discarded pointer. */
+static bool LoadNavRoute(const char *name, const char *magic)
 {
-	FILE *fpout;
+	FILE *file = fopen(name, "rb");
+	char header[8];
+	unsigned char record[40];
+	int count;
+	long payload;
+	size_t stride;
+
+	if (!file)
+		return false;
+	if (fread(header, 1, sizeof(header), file) != sizeof(header) ||
+		memcmp(header, magic, sizeof(header)) != 0 ||
+		fread(&count, sizeof(count), 1, file) != 1 ||
+		count <= 0 || count > MAXNODES ||
+		fseek(file, 0, SEEK_END) != 0)
+		goto invalid;
+
+	payload = ftell(file) - (long)(sizeof(header) + sizeof(count));
+	if (payload == count * 32L)
+		stride = 32;
+	else if (payload == count * 40L)
+		stride = 40;
+	else
+		goto invalid;
+	if (fseek(file, sizeof(header) + sizeof(count), SEEK_SET) != 0)
+		goto invalid;
+
+	for (int i = 0; i < count; i++) {
+		size_t index_offset = stride == 32 ? 28 : 32;
+		if (fread(record, 1, stride, file) != stride)
+			goto invalid;
+		memcpy(Route[i].Pt, record, sizeof(Route[i].Pt));
+		memcpy(Route[i].Tcourner, record + 12, sizeof(Route[i].Tcourner));
+		memcpy(&Route[i].index, record + index_offset, sizeof(Route[i].index));
+		memcpy(&Route[i].state, record + index_offset + 2, sizeof(Route[i].state));
+	}
+	fclose(file);
+	CurrentIndex = count;
+	return true;
+
+invalid:
+	fclose(file);
+	memset(Route, 0, sizeof(Route));
+	gi.dprintf("Chaining: invalid route %s\n", name);
+	return false;
+}
+
+void CTFSetupNavSpawn(void)
+{
 	char name[256];
-	char code[8];
-	char SRCcode[8];
-	const char *dir, *ext;
 	int i, j;
 	vec3_t v;
 	edict_t *other;
+	bool ctf_route = ctf->value && !tdm->value;
+	bool loaded;
 
-	unsigned int size;
-	char zigctf = 0;
-
-	//PONKO
 	spawncycle = level.time + FRAMETIME * 20;
-	//PONKO
-	//ルート初期化
 	CurrentIndex = 0;
 	memset(Route, 0, sizeof(Route));
-	memset(code, 0, 8);
 
-	// TDM turns ctf on (CTFInit), but plays DM maps with DM routes
-	if (ctf->value && !tdm->value) {
-		dir = "chctf";
-		ext = "chf";
+	if (ctf_route)
 		gi.dprintf("We are in CTF mode.\n");
-	} else {
-		dir = "chdtm";
-		ext = "chn";
-	}
 
-	snprintf(name, sizeof(name), "%s/%s/%s/%s.%s", GET_BASEPATH_STR(), GET_GAMEPATH_STR(), dir, level.mapname, ext);
-	fpout = fopen(name, "rb");
-
-	if (fpout == NULL && zigmode->value) {
+	snprintf(name, sizeof(name), "%s/%s/%s/%s.%s", GET_BASEPATH_STR(), GET_GAMEPATH_STR(),
+		ctf_route ? "chctf" : "chdtm", level.mapname, ctf_route ? "chf" : "chn");
+	loaded = LoadNavRoute(name, ctf_route ? "3ZBRGCTF" : "3ZBRGDTM");
+	if (!loaded && zigmode->value && !ctf_route) {
 		snprintf(name, sizeof(name), "%s/%s/chctf/%s.chf", GET_BASEPATH_STR(), GET_GAMEPATH_STR(), level.mapname);
-		fpout = fopen(name, "rb");
-		zigctf = 1;
+		loaded = LoadNavRoute(name, "3ZBRGCTF");
+	}
+	if (!loaded) {
+		gi.dprintf("Chaining: no usable route for %s.\n", level.mapname);
+		if (zigmode->value)
+			gi.error("Chaining file required for zigmode.");
+		return;
 	}
 
-	if (fpout == NULL) {
-		if (!ctf->value || tdm->value) {
-			gi.dprintf("Chaining: file %s/chdtm/%s.chn not found.\n", GET_GAMEPATH_STR(), level.mapname);
-			if (zigmode->value) {
-				gi.dprintf("\nChaining file required for zigmode.\n\n");
-				gi.error("%s", ERR_FATAL ? ERR_FATAL : "CTF nav spawn error");
-			}
-		} else
-			gi.dprintf("Chaining: file %s/chctf/%s.chf not found.\n", GET_GAMEPATH_STR(), level.mapname);
+	gi.dprintf("Chaining: %s chn/chf found.\n", level.mapname);
+	for (i = 0; i < CurrentIndex; i++) {
+		if (Route[i].state == GRS_TELEPORT)
+			gi.dprintf("GRS_TELEPORT\n");
 
-	} else {
-		if (fread(code, sizeof(char), 8, fpout) != 8)
-			gi.error("Error reading 8 bytes into code buffer\n");
-
-		if ((ctf->value && !tdm->value) || zigctf)
-			memcpy(SRCcode, "3ZBRGCTF", 8);
-		else
-			memcpy(SRCcode, "3ZBRGDTM", 8);
-
-		if (strncmp(code, SRCcode, 8)) {
-			CurrentIndex = 0;
-			gi.dprintf("Chaining: %s has no chn/chf chaining file.\n", level.mapname);
-			fclose(fpout);
-			return;
-		}
-		gi.dprintf("Chaining: %s chn/chf found.\n", level.mapname);
-		if (fread(&CurrentIndex, sizeof(int), 1, fpout) != 1)
-			gi.error("Error reading CurrentIndex from file\n");
-
-		size = (unsigned int)CurrentIndex * sizeof(route_t);
-		size_t read_count = fread(Route, 1, size, fpout);
-
-		if (read_count != size)
-			gi.dprintf("Expected %u, but got %zu bytes\n", size, read_count);
-
-		for (i = 0; i < CurrentIndex; i++) {
-			if (Route[i].state == GRS_TELEPORT)
-				gi.dprintf("GRS_TELEPORT\n");
-
-			if ((Route[i].state > GRS_TELEPORT /*GRS_ONROTATE*/ && Route[i].state <= GRS_PUSHBUTTON) || Route[i].state == GRS_REDFLAG || Route[i].state == GRS_BLUEFLAG) {
-				other = &g_edicts[(int)maxclients->value + 1];
-				for (j = maxclients->value + 1; j < globals.num_edicts; j++, other++) {
-					if (other->inuse) {
-						if (Route[i].state == GRS_ONPLAT || Route[i].state == GRS_ONTRAIN || Route[i].state == GRS_PUSHBUTTON || Route[i].state == GRS_ONDOOR) {
-							VectorAdd(other->s.origin, other->mins, v);
-							if (VectorCompare(Route[i].Pt, v /*other->monsterinfo.last_sighting*/)) {
-								//onplat
-								if (Route[i].state == GRS_ONPLAT && !Q_stricmp(other->classname, "func_plat")) {
-									//gi.dprintf("assingned %s\n",other->classname);
-									Route[i].ent = other;
-									break;
-								}
-								//train
-								else if (Route[i].state == GRS_ONTRAIN && !Q_stricmp(other->classname, "func_train")) {
-									//gi.dprintf("assingned %s\n",other->classname);
-									Route[i].ent = other;
-									break;
-								}
-								//button
-								else if (Route[i].state == GRS_PUSHBUTTON && !Q_stricmp(other->classname, "func_button")) {
-									//gi.dprintf("assingned %s\n",other->classname);
-									Route[i].ent = other;
-									break;
-								}
-								//door
-								else if (Route[i].state == GRS_ONDOOR && !Q_stricmp(other->classname, "func_door")) {
-									//gi.dprintf("assingned %s\n",other->classname);
-									Route[i].ent = other;
-									break;
-								}
+		if ((Route[i].state > GRS_TELEPORT /*GRS_ONROTATE*/ && Route[i].state <= GRS_PUSHBUTTON) || Route[i].state == GRS_REDFLAG || Route[i].state == GRS_BLUEFLAG) {
+			other = &g_edicts[(int)maxclients->value + 1];
+			for (j = maxclients->value + 1; j < globals.num_edicts; j++, other++) {
+				if (other->inuse) {
+					if (Route[i].state == GRS_ONPLAT || Route[i].state == GRS_ONTRAIN || Route[i].state == GRS_PUSHBUTTON || Route[i].state == GRS_ONDOOR) {
+						VectorAdd(other->s.origin, other->mins, v);
+						if (VectorCompare(Route[i].Pt, v /*other->monsterinfo.last_sighting*/)) {
+							//onplat
+							if (Route[i].state == GRS_ONPLAT && !Q_stricmp(other->classname, "func_plat")) {
+								//gi.dprintf("assingned %s\n",other->classname);
+								Route[i].ent = other;
+								break;
 							}
-						} else if (Route[i].state == GRS_ITEMS || Route[i].state == GRS_REDFLAG || Route[i].state == GRS_BLUEFLAG) {
-							//else gi.dprintf("CYAU!!!!!!!\n");
-							if (VectorCompare(Route[i].Pt, other->monsterinfo.last_sighting /*->s.origin*/)) {
-								//onplat
-								if (1 /*other->classname[0] == 'w' || other->classname[0] == 'i'*/) {
-									//if(Route[i].state == GRS_REDFLAG || Route[i].state == GRS_BLUEFLAG)
-									//gi.dprintf("HATA ATTA!!!!!!!\n");
-									//gi.dprintf("assingned %s\n",other->classname);
-									Route[i].ent = other;
-									break;
-								}
-							} else {
+							//train
+							else if (Route[i].state == GRS_ONTRAIN && !Q_stricmp(other->classname, "func_train")) {
+								//gi.dprintf("assingned %s\n",other->classname);
+								Route[i].ent = other;
+								break;
+							}
+							//button
+							else if (Route[i].state == GRS_PUSHBUTTON && !Q_stricmp(other->classname, "func_button")) {
+								//gi.dprintf("assingned %s\n",other->classname);
+								Route[i].ent = other;
+								break;
+							}
+							//door
+							else if (Route[i].state == GRS_ONDOOR && !Q_stricmp(other->classname, "func_door")) {
+								//gi.dprintf("assingned %s\n",other->classname);
+								Route[i].ent = other;
+								break;
+							}
+						}
+					} else if (Route[i].state == GRS_ITEMS || Route[i].state == GRS_REDFLAG || Route[i].state == GRS_BLUEFLAG) {
+						//else gi.dprintf("CYAU!!!!!!!\n");
+						if (VectorCompare(Route[i].Pt, other->monsterinfo.last_sighting /*->s.origin*/)) {
+							//onplat
+							if (1 /*other->classname[0] == 'w' || other->classname[0] == 'i'*/) {
 								//if(Route[i].state == GRS_REDFLAG || Route[i].state == GRS_BLUEFLAG)
-								//gi.dprintf("HATA Dame!!!!!!!\n");
+								//gi.dprintf("HATA ATTA!!!!!!!\n");
+								//gi.dprintf("assingned %s\n",other->classname);
+								Route[i].ent = other;
+								break;
 							}
+						} else {
+							//if(Route[i].state == GRS_REDFLAG || Route[i].state == GRS_BLUEFLAG)
+							//gi.dprintf("HATA Dame!!!!!!!\n");
 						}
 					}
 				}
-				if (j >= globals.num_edicts && (Route[i].state == GRS_ITEMS || Route[i].state == GRS_REDFLAG || Route[i].state == GRS_BLUEFLAG))
-					gi.dprintf("kicked item\n");
-				if (j >= globals.num_edicts)
-					Route[i].state = GRS_NORMAL;
 			}
+			if (j >= globals.num_edicts && (Route[i].state == GRS_ITEMS || Route[i].state == GRS_REDFLAG || Route[i].state == GRS_BLUEFLAG))
+				gi.dprintf("kicked item\n");
+			if (j >= globals.num_edicts)
+				Route[i].state = GRS_NORMAL;
 		}
-		gi.dprintf("Chaining: Total %i chaining pod assigned.\n", CurrentIndex);
-		fclose(fpout);
 	}
-	return;
+	gi.dprintf("Chaining: Total %i chaining pod assigned.\n", CurrentIndex);
 }
 
 void SpawnExtra (vec3_t position, char *classname)
